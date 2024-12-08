@@ -35,3 +35,9 @@ export interface DocumentInterface {
     displayName: string,
     createTime: DateTime,
 }
+
+export interface DirectoryInterface {
+    id: Guid,
+    path: string,
+    documents: Guid[]
+}

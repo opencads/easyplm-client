@@ -4,17 +4,18 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DocumentInterface, ImportInterface } from './interfaces';
+import { DirectoryInterface, DocumentInterface, ImportInterface } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
 import { DateTime } from '../.tsc/System/DateTime';
 import { Environment } from '../.tsc/System/Environment';
 import { Directory } from '../.tsc/System/IO/Directory';
+import { Guid } from '../.tsc/System/Guid';
 
 let DatabaseInterfaces = () => {
     let documentInterface = {
-        name: 'document',
+        name: 'xplm/document',
         fields: [
             {
                 name: 'id',
@@ -29,12 +30,6 @@ let DatabaseInterfaces = () => {
                 name: 'key',
                 type: 'md5',
                 isIndex: true
-            },
-            {
-                name: 'directory',
-                type: 'char',
-                length: 256,
-                isIndexSet: true
             },
             {
                 name: 'originFileName',
@@ -120,9 +115,30 @@ let DatabaseInterfaces = () => {
             }
         ]
     } as databaseInterface;
-
+    let directoryInterface = {
+        name: 'xplm/directory',
+        fields: [
+            {
+                name: 'id',
+                isMaster: true,
+                type: 'Guid'
+            },
+            {
+                name: 'path',
+                type: 'char',
+                length: 256,
+                isIndexSet: true
+            },
+            {
+                name: 'documents',
+                type: 'Guid',
+                length: 32
+            }
+        ]
+    } as databaseInterface;
     return {
-        documentInterface
+        documentInterface,
+        directoryInterface
     };
 };
 
@@ -173,24 +189,66 @@ let Client = () => {
             ...abstract,
             key: abstractMD5,
             originFileName: fileName,
-            formatFileName: formatFileName,
-            directory: data.directory,
+            formatFileName: formatFileName
         }
     };
-    let importDocument = async (data: ImportInterface) => {
+    let tryAddToDirectory = async (directory: string, documentIDs: Guid[]) => {
+        let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory.toLowerCase()) as DirectoryInterface[];
+        if (directoryRecords.length == 0) {
+            let directoryRecord = {
+                path: directory.toLowerCase(),
+                documents: documentIDs
+            } as DirectoryInterface;
+            await db.insert(databaseInterfaces.directoryInterface.name, directoryRecord);
+        }
+        else {
+            for (let directoryRecord of directoryRecords) {
+                let documents = directoryRecord.documents;
+                documents = documents.filter(item => item != Guid.Empty);
+                let isUpdated = false;
+                for (let documentID of [...documentIDs]) {
+                    if (documents.indexOf(documentID) == -1 && (documents.length < 32)) {
+                        documents.push(documentID);
+                        documentIDs.splice(documentIDs.indexOf(documentID), 1);
+                        isUpdated = true;
+                    }
+                }
+                if (isUpdated) {
+                    directoryRecord.documents = documents;
+                    await db.updatebyMaster(databaseInterfaces.directoryInterface.name, directoryRecord);
+                }
+            }
+            for (let i = 0; i < documentIDs.length; i += 32) {
+                let documentIDsChunk = documentIDs.slice(i, i + 32);
+                let directoryRecord = {
+                    path: directory.toLowerCase(),
+                    documents: documentIDsChunk
+                } as DirectoryInterface;
+                await db.insert(databaseInterfaces.directoryInterface.name, directoryRecord);
+            }
+
+        }
+    };
+    let archiveDocument = async (data: ImportInterface) => {
         let abstract = formatImport(data);
         if (await db.containsByIndex(databaseInterfaces.documentInterface.name, "key", abstract.key)) {
             let record = await db.findByIndex(databaseInterfaces.documentInterface.name, "key", abstract.key) as DocumentInterface;
-            if (record.documentRemoteID == "" && data.documentRemoteID) {
+            let isUpdated = false;
+            if (record.documentRemoteID == "" && (data.documentRemoteID) && (record.documentRemoteID != data.documentRemoteID)) {
                 record.documentRemoteID = data.documentRemoteID;
+                isUpdated = true;
             }
-            if (record.partRemoteID == "" && data.partRemoteID) {
+            if (record.partRemoteID == "" && (data.partRemoteID) && (record.partRemoteID != data.partRemoteID)) {
                 record.partRemoteID = data.partRemoteID;
+                isUpdated = true;
             }
-            if (record.displayName == "" && data.displayName) {
+            if (record.displayName == "" && (data.displayName) && (record.displayName != data.displayName)) {
                 record.displayName = data.displayName;
+                isUpdated = true;
             }
-            await db.updatebyMaster(databaseInterfaces.documentInterface.name, record);
+            if (isUpdated) {
+                await db.updatebyMaster(databaseInterfaces.documentInterface.name, record);
+            }
             return record as DocumentInterface;
         }
         else {
@@ -209,7 +267,26 @@ let Client = () => {
 
         }
     };
-    let isImportedDocument = async (data: ImportInterface) => {
+    let importDocumentsToDirectory = async (data: ImportInterface[]) => {
+        let mapDirectoryToDocumentIDs = {} as { [key: string]: Guid[] };
+        for (let item of data) {
+            let documentInterface = await archiveDocument(item);
+            if (item.directory) {
+                let lowerDirectory = item.directory.toLowerCase();
+                if (mapDirectoryToDocumentIDs[lowerDirectory] == undefined) {
+                    mapDirectoryToDocumentIDs[lowerDirectory] = [];
+                }
+                mapDirectoryToDocumentIDs[lowerDirectory].push(documentInterface.id);
+            }
+        }
+        let directoryKeys = Object.keys(mapDirectoryToDocumentIDs);
+        for (let directoryKey of directoryKeys) {
+            let documentIDs = mapDirectoryToDocumentIDs[directoryKey];
+            await tryAddToDirectory(directoryKey, documentIDs);
+        }
+
+    };
+    let isArchivedDocument = async (data: ImportInterface) => {
         let abstract = formatImport(data);
         if (await db.containsByIndex(databaseInterfaces.documentInterface.name, "key", abstract.key)) {
             return true;
@@ -219,7 +296,15 @@ let Client = () => {
         }
     };
     let getDocumentsByDirectory = async (directory: string) => {
-        let records = await db.findByIndexSet(databaseInterfaces.documentInterface.name, "directory", directory) as DocumentInterface[];
+        let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory.toLowerCase()) as DirectoryInterface[];
+        let records = [] as DocumentInterface[];
+        for (let directoryRecord of directoryRecords) {
+            let documentIDs = directoryRecord.documents;
+            for (let documentID of documentIDs) {
+                let record = await db.findByMaster(databaseInterfaces.documentInterface.name, documentID) as DocumentInterface;
+                records.push(record);
+            }
+        }
         let mapFileNameToRecord = {} as { [key: string]: DocumentInterface };
         let mapDocumentNumber0ToRecord = {} as { [key: string]: DocumentInterface };
         let mapDocumentNumber1ToRecord = {} as { [key: string]: DocumentInterface };
@@ -332,17 +417,12 @@ let Client = () => {
     };
     registerService = () => {
         server.use(`/api/v1/xplm/import`, async (data: ImportInterface[]) => {
-            let result = [] as DocumentInterface[];
-            for (let importData of data) {
-                let record = await importDocument(importData);
-                result.push(record);
-            }
-            return result;
+            return await importDocumentsToDirectory(data);
         });
         server.use(`/api/v1/xplm/isImported`, async (data: ImportInterface[]) => {
             let result = [] as any[];
             for (let importData of data) {
-                let isImported = await isImportedDocument(importData);
+                let isImported = await isArchivedDocument(importData);
                 result.push({
                     ...importData,
                     isImported
@@ -356,7 +436,7 @@ let Client = () => {
     };
     return {
         start,
-        importDocument,
+        importDocumentsToDirectory,
         getDocumentsByDirectory
     }
 };
