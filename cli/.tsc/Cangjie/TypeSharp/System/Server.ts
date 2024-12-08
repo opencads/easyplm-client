@@ -2,6 +2,7 @@ import { Application } from "../../../VizGroup/V1/Application";
 import { database } from "./database";
 import { ServiceScope } from "../../../VizGroup/V1/ServiceScope";
 import { ioStorageService } from "./ioStorageService";
+import { TaskCompletionSource } from "../../../System/Threading/Tasks/TaskCompletionSource";
 import { Delegate } from "../../../System/Delegate";
 import { Type } from "../../../System/Type";
 export class Server {
@@ -38,6 +39,12 @@ export class Server {
         return {} as any;
     }
     public get storageService(): ioStorageService {
+        return {} as any;
+    }
+    public get onDatabaseSetupCompleted(): TaskCompletionSource {
+        return {} as any;
+    }
+    public get onConfigCompleted(): TaskCompletionSource {
         return {} as any;
     }
 }

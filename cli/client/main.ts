@@ -150,7 +150,9 @@ let Client = () => {
 
     };
     let start = async (port: number) => {
-        await server.start(port);
+        console.log(`start server at port ${port}`);
+        server.start(port);
+        await server.onConfigCompleted.Task;
         db = server.getDatabase();
         let interfaceKeys = Object.keys(databaseInterfaces);
         for (let interfaceKey of interfaceKeys) {
