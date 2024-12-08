@@ -446,6 +446,7 @@ let Client = () => {
 let main = async () => {
     let client = Client();
     await client.start(19799);
+    Console.ReadLine();
 };
 
 await main();
