@@ -12,7 +12,16 @@ import { DateTime } from '../.tsc/System/DateTime';
 import { Environment } from '../.tsc/System/Environment';
 import { Directory } from '../.tsc/System/IO/Directory';
 import { Guid } from '../.tsc/System/Guid';
+import { Json } from '../.tsc/TidyHPC/LiteJson/Json'
 
+let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
+if (Directory.Exists(appDataDirectory) == false) {
+    Directory.CreateDirectory(appDataDirectory);
+}
+let defaultWorkSpaceDirectory = Path.Combine(env('mydocuments'), '.xplm', 'WorkSpace');
+if (Directory.Exists(defaultWorkSpaceDirectory) == false) {
+    Directory.CreateDirectory(defaultWorkSpaceDirectory);
+}
 let DatabaseInterfaces = () => {
     let documentInterface = {
         name: 'xplm/document',
@@ -142,10 +151,27 @@ let DatabaseInterfaces = () => {
     };
 };
 
+let LocalConfig = () => {
+    let config = {} as any;
+    let load = () => {
+        config = Json.TryLoad(Path.Combine(appDataDirectory, 'config.json'), () => ({}));
+    };
+    let save = () => {
+        File.WriteAllText(Path.Combine(appDataDirectory, 'config.json'), JSON.stringify(config));
+    };
+    load();
+    return {
+        load,
+        save,
+        get: () => config
+    };
+};
+
 let Client = () => {
     let server = new Server();
     let db: database;
     let databaseInterfaces = DatabaseInterfaces();
+    let localConfig = LocalConfig();
     let registerService = () => {
 
     };
@@ -435,6 +461,19 @@ let Client = () => {
         server.use(`/api/v1/xplm/getDocumentsByDirectory`, async (directory: string) => {
             return await getDocumentsByDirectory(directory);
         });
+        server.use(`/api/v1/xplm/getDefaultDirectory`, async () => {
+            if (localConfig.get().defaultDirectory) {
+                return localConfig.get().defaultDirectory;
+            }
+            else {
+                return defaultWorkSpaceDirectory;
+            }
+        });
+        server.use(`/api/v1/xplm/setDefaultDirectory`, async (directory: string) => {
+            localConfig.get().defaultDirectory = directory;
+            localConfig.save();
+        });
+
     };
     return {
         start,
