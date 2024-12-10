@@ -167,11 +167,15 @@ let LocalConfig = () => {
     let save = () => {
         File.WriteAllText(filePath, JSON.stringify(config));
     };
+    let getDefaultDirectory = () => {
+        return config.defaultDirectory ?? defaultWorkSpaceDirectory;
+    };
     load();
     return {
         load,
         save,
-        get: () => config
+        get: () => config,
+        getDefaultDirectory
     };
 };
 
@@ -455,7 +459,7 @@ let Client = () => {
         return result;
     };
     let downloadToDefaultDirectory = async (fileID: Guid, fileName: string) => {
-        let defaultDirectory = localConfig.get().defaultDirectory;
+        let defaultDirectory = localConfig.getDefaultDirectory();
         let filePath = Path.Combine(defaultDirectory, fileName);
         let fileInterface = await server.storageService.getFileByID(fileID);
         await server.storageService.exportContentToFilePath(fileInterface.FullContentMD5, filePath);
