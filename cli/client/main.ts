@@ -458,7 +458,7 @@ let Client = () => {
         let defaultDirectory = localConfig.get().defaultDirectory;
         let filePath = Path.Combine(defaultDirectory, fileName);
         let fileInterface = await server.storageService.getFileByID(fileID);
-        server.storageService.exportContentToFilePath(fileInterface.FullContentMD5, filePath);
+        await server.storageService.exportContentToFilePath(fileInterface.FullContentMD5, filePath);
     };
     registerService = () => {
         server.use(`/api/v1/xplm/import`, async (data: ImportInterface[]) => {
