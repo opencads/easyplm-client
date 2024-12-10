@@ -13,6 +13,8 @@ import { Environment } from '../.tsc/System/Environment';
 import { Directory } from '../.tsc/System/IO/Directory';
 import { Guid } from '../.tsc/System/Guid';
 import { Json } from '../.tsc/TidyHPC/LiteJson/Json'
+import { Session } from '../.tsc/TidyHPC/Routers/Urls/Session';
+import { FileStream } from '../.tsc/System/IO/FileStream';
 
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
 if (Directory.Exists(appDataDirectory) == false) {
@@ -152,12 +154,18 @@ let DatabaseInterfaces = () => {
 };
 
 let LocalConfig = () => {
+    let filePath = Path.Combine(appDataDirectory, 'config.json');
     let config = {} as any;
     let load = () => {
-        config = Json.TryLoad(Path.Combine(appDataDirectory, 'config.json'), () => ({}));
+        if (File.Exists(filePath)) {
+            config = Json.Load(filePath);
+        }
+        else {
+            config = {};
+        }
     };
     let save = () => {
-        File.WriteAllText(Path.Combine(appDataDirectory, 'config.json'), JSON.stringify(config));
+        File.WriteAllText(filePath, JSON.stringify(config));
     };
     load();
     return {
@@ -296,9 +304,11 @@ let Client = () => {
         }
     };
     let importDocumentsToDirectory = async (data: ImportInterface[]) => {
+        let result = [] as DocumentInterface[];
         let mapDirectoryToDocumentIDs = {} as { [key: string]: Guid[] };
         for (let item of data) {
             let documentInterface = await archiveDocument(item);
+            result.push(documentInterface);
             if (item.directory) {
                 let lowerDirectory = item.directory.toLowerCase();
                 if (mapDirectoryToDocumentIDs[lowerDirectory] == undefined) {
@@ -312,6 +322,7 @@ let Client = () => {
             let documentIDs = mapDirectoryToDocumentIDs[directoryKey];
             await tryAddToDirectory(directoryKey, documentIDs);
         }
+        return result;
 
     };
     let isArchivedDocument = async (data: ImportInterface) => {
@@ -443,6 +454,12 @@ let Client = () => {
         }
         return result;
     };
+    let downloadToDefaultDirectory = async (fileID: Guid, fileName: string) => {
+        let defaultDirectory = localConfig.get().defaultDirectory;
+        let filePath = Path.Combine(defaultDirectory, fileName);
+        let fileInterface = await server.storageService.getFileByID(fileID);
+        server.storageService.exportContentToFilePath(fileInterface.FullContentMD5, filePath);
+    };
     registerService = () => {
         server.use(`/api/v1/xplm/import`, async (data: ImportInterface[]) => {
             return await importDocumentsToDirectory(data);
@@ -472,6 +489,9 @@ let Client = () => {
         server.use(`/api/v1/xplm/setDefaultDirectory`, async (directory: string) => {
             localConfig.get().defaultDirectory = directory;
             localConfig.save();
+        });
+        server.use(`/api/v1/xplm/downloadToDefaultDirectory`, async (fileID: Guid, fileName: string) => {
+            await downloadToDefaultDirectory(fileID, fileName);
         });
 
     };

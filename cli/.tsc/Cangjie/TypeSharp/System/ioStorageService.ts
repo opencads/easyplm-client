@@ -21,6 +21,9 @@ export class ioStorageService {
     public readContent(contentMD5?: string): Promise<string> {
         return {} as any;
     }
+    public getFileByID(fileID?: any): Promise<FileInterface> {
+        return {} as any;
+    }
     public GetType(): Type {
         return {} as any;
     }
