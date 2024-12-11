@@ -41,3 +41,8 @@ export interface DirectoryInterface {
     path: string,
     documents: Guid[]
 }
+
+export interface PluginSubscriber {
+    url: string,
+    name: string,
+}

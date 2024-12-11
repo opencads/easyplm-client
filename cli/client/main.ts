@@ -4,7 +4,7 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DirectoryInterface, DocumentInterface, ImportInterface } from './interfaces';
+import { DirectoryInterface, DocumentInterface, ImportInterface, PluginSubscriber } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -15,14 +15,26 @@ import { Guid } from '../.tsc/System/Guid';
 import { Json } from '../.tsc/TidyHPC/LiteJson/Json'
 import { Session } from '../.tsc/TidyHPC/Routers/Urls/Session';
 import { FileStream } from '../.tsc/System/IO/FileStream';
+import { axios } from '../.tsc/Cangjie/TypeSharp/System/axios';
+import { zip } from '../.tsc/Cangjie/TypeSharp/System/zip';
+import { GitHubRelease } from "./git-interfaces";
+
 
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
 if (Directory.Exists(appDataDirectory) == false) {
     Directory.CreateDirectory(appDataDirectory);
 }
+let downloadDirectory = Path.Combine(appDataDirectory, 'download');
+if (Directory.Exists(downloadDirectory) == false) {
+    Directory.CreateDirectory(downloadDirectory);
+}
 let defaultWorkSpaceDirectory = Path.Combine(env('mydocuments'), '.xplm', 'WorkSpace');
 if (Directory.Exists(defaultWorkSpaceDirectory) == false) {
     Directory.CreateDirectory(defaultWorkSpaceDirectory);
+}
+let pluginsDirectory = Path.Combine(appDataDirectory, 'plugins');
+if (Directory.Exists(pluginsDirectory) == false) {
+    Directory.CreateDirectory(pluginsDirectory);
 }
 let DatabaseInterfaces = () => {
     let documentInterface = {
@@ -153,6 +165,85 @@ let DatabaseInterfaces = () => {
     };
 };
 
+let getGitInfo = (url: string) => {
+    // https://github.com/opencads/xplm-ui-home.git
+    if (url.endsWith(".git")) {
+        url = url.substring(0, url.length - 4);
+    }
+    if (url.startsWith("https://")) {
+        url = url.substring(8);
+    }
+    else if (url.startsWith("http://")) {
+        url = url.substring(7);
+    }
+    let items = url.split("/");
+    if (items.length > 2) {
+        return {
+            success: true,
+            owner: items[1],
+            repo: items[2]
+        }
+    }
+    else {
+        return {
+            success: false,
+            owner: "",
+            repo: ""
+        }
+    }
+}
+
+let ReleaseDownloader = () => {
+    // 根据git release下载、判断是否更新等功能
+    let getLatestRelease = async (owner: string, repo: string) => {
+        // 构造用于获取最新发布的 GitHub API URL
+        let url = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+        let response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'tscl'
+            }
+        });
+
+        if (response.status == 200) {
+            return response.data as GitHubRelease;
+        }
+        else {
+            throw `获取最新发布失败: ${response.status}`;
+        }
+
+    };
+    let download = async (owner: string, repo: string, outputDirectory: string) => {
+        let latestRelease = await getLatestRelease(owner, repo);
+        let lastRelease = {} as GitHubRelease;
+        let localReleaseJsonPath = Path.Combine(outputDirectory, '.gitrelease.json');
+        if (File.Exists(localReleaseJsonPath)) {
+            lastRelease = Json.Load(localReleaseJsonPath);
+        }
+        // 判断版本是否一致，不一致就下载
+        if (latestRelease.tag_name != lastRelease.tag_name) {
+            let downloadPaths = [] as string[];
+            for (let asset of latestRelease.assets) {
+                let downloadUrl = asset.browser_download_url;
+                let downloadPath = Path.Combine(outputDirectory, Path.GetFileName(downloadUrl));
+                downloadPaths.push(downloadPath);
+                await axios.download(downloadUrl, downloadPath);
+            }
+            for (let downloadPath of downloadPaths) {
+                let zipExtractDirectory = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(downloadPath));
+                await zip.extract(downloadPath, zipExtractDirectory);
+            }
+            // 下载完成后，更新本地版本号
+            File.WriteAllText(localReleaseJsonPath, JSON.stringify(latestRelease));
+        }
+    };
+    return {
+        getLatestRelease,
+        download
+    };
+};
+
+let releaseDownloader = ReleaseDownloader();
+
 let LocalConfig = () => {
     let filePath = Path.Combine(appDataDirectory, 'config.json');
     let config = {} as any;
@@ -170,17 +261,60 @@ let LocalConfig = () => {
     let getDefaultDirectory = () => {
         return config.defaultDirectory ?? defaultWorkSpaceDirectory;
     };
+    let setDefaultDirectory = (directory: string) => {
+        config.defaultDirectory = directory;
+        save();
+    };
+    let getPluginSubscribers = () => {
+        return (config.pluginSubscribers ?? []) as PluginSubscriber[];
+    };
+    let setPluginSubscribers = (pluginSubscribers: PluginSubscriber[]) => {
+        config.pluginSubscribers = pluginSubscribers;
+        save();
+    };
+    let addPluginSubscriber = (pluginSubscriber: PluginSubscriber) => {
+        let pluginSubscribers = getPluginSubscribers();
+        if (pluginSubscribers.find(item => item.name == pluginSubscriber.name || item.url == pluginSubscriber.url)) {
+            throw `Plugin ${pluginSubscriber.name}/${pluginSubscriber.url} already subscribed`;
+        }
+        pluginSubscribers.push(pluginSubscriber);
+        setPluginSubscribers(pluginSubscribers);
+    };
     load();
     return {
         load,
         save,
         get: () => config,
-        getDefaultDirectory
+        getDefaultDirectory,
+        getPluginSubscribers,
+        setPluginSubscribers,
+        addPluginSubscriber,
+        setDefaultDirectory,
+
     };
 };
 
+let localConfig = LocalConfig();
+
+let PluginManager = () => {
+    let updateSubscribers = async () => {
+        let subscribers = localConfig.getPluginSubscribers();
+        for (let subscriber of subscribers) {
+            let outputDirectory = Path.Combine(pluginsDirectory, subscriber.name);
+            let gitInfo = getGitInfo(subscriber.url);
+            await releaseDownloader.download(gitInfo.owner, gitInfo.repo, outputDirectory);
+        }
+    };
+    return {
+        updateSubscribers
+    };
+};
+
+let pluginManager = PluginManager();
+
 let Client = () => {
     let server = new Server();
+    server.ApplicationConfig.PluginsDirectory = pluginsDirectory;
     let db: database;
     let databaseInterfaces = DatabaseInterfaces();
     let localConfig = LocalConfig();
@@ -198,6 +332,7 @@ let Client = () => {
             await db.register(databaseInterface);
         }
         registerService();
+        await pluginManager.updateSubscribers();
     };
     let digitFileExtensionReg = new Regex('\\.\\d+$');
     let formatImport = (data: ImportInterface) => {
@@ -491,9 +626,20 @@ let Client = () => {
                 return defaultWorkSpaceDirectory;
             }
         });
-        server.use(`/api/v1/xplm/setDefaultDirectory`, async (directory: string) => {
-            localConfig.get().defaultDirectory = directory;
-            localConfig.save();
+        server.use(`/api/v1/xplm/setDefaultDirectory`, async (defaultDirectory: string) => {
+            localConfig.setDefaultDirectory(defaultDirectory);
+        });
+        server.use(`/api/v1/xplm/getPluginSubscribers`, async () => {
+            return localConfig.getPluginSubscribers();
+        });
+        server.use(`/api/v1/xplm/setPluginSubscribers`, async (subscribers: PluginSubscriber[]) => {
+            localConfig.setPluginSubscribers(subscribers);
+        });
+        server.use(`/api/v1/xplm/addPluginSubscriber`, async (subscriber: PluginSubscriber) => {
+            localConfig.addPluginSubscriber(subscriber);
+        });
+        server.use(`/api/v1/xplm/updatePlugins`, async () => {
+            await pluginManager.updateSubscribers();
         });
         server.use(`/api/v1/xplm/downloadToDefaultDirectory`, async (fileID: Guid, fileName: string) => {
             await downloadToDefaultDirectory(fileID, fileName);

@@ -1,4 +1,5 @@
 import { Application } from "../../../VizGroup/V1/Application";
+import { ApplicationConfig } from "../../../VizGroup/V1/ApplicationConfig";
 import { database } from "./database";
 import { ServiceScope } from "../../../VizGroup/V1/ServiceScope";
 import { ioStorageService } from "./ioStorageService";
@@ -33,6 +34,9 @@ export class Server {
     public constructor() {
     }
     public get Application(): Application {
+        return {} as any;
+    }
+    public get ApplicationConfig(): ApplicationConfig {
         return {} as any;
     }
     public get serviceScope(): ServiceScope {
