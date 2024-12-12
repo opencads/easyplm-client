@@ -245,7 +245,10 @@ let GitManager = () => {
         }
     };
     let getRemotes = async (outputDirectory: string) => {
-        let cmdResult = await cmdAsync(outputDirectory, `git remote -v`);
+        let cmdResult = await cmdAsync(outputDirectory, `git remote -v`,{
+            redirect:true,
+            useShellExecute:false
+        });
         console.log(cmdResult);
         let lines = (cmdResult.output ?? "").replace('\r', '').split('\n');
         let result = [] as GitRemote[];
