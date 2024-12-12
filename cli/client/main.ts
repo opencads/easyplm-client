@@ -335,6 +335,9 @@ let PluginManager = () => {
         let subscribers = localConfig.getPluginSubscribers();
         for (let subscriber of subscribers) {
             let outputDirectory = Path.Combine(pluginsDirectory, subscriber.name);
+            if(!Directory.Exists(outputDirectory)){
+                Directory.CreateDirectory(outputDirectory);
+            }
             if (subscriber.type == 'git-release') {
                 let gitInfo = gitManager.getGitInfo(subscriber.url);
                 await gitManager.downloadRelease(gitInfo.owner, gitInfo.repo, outputDirectory);
