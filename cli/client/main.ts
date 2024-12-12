@@ -1,10 +1,10 @@
-import { args, cmdAsync, env, execAsync, md5 } from '../.tsc/context';
+import { args, cmdAsync, deleteDirectory, env, execAsync, md5 } from '../.tsc/context';
 import { database } from '../.tsc/Cangjie/TypeSharp/System/database';
 import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInterface';
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DirectoryInterface, DocumentInterface, ImportInterface, PluginSubscriber } from './interfaces';
+import { DirectoryInterface, DocumentInterface, ImportInterface, LocalSubscriber, PluginSubscriber } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -164,8 +164,6 @@ let DatabaseInterfaces = () => {
         directoryInterface
     };
 };
-
-
 
 let GitManager = () => {
     let getGitInfo = (url: string) => {
@@ -348,17 +346,14 @@ let PluginManager = () => {
     };
     let getLocalSubscribers = async () => {
         let subDirectories = Directory.GetDirectories(pluginsDirectory);
-        let result = [] as {
-            path: string,
-            url: string
-        }[];
+        let result = [] as LocalSubscriber[];
         for (let subDirectory of subDirectories) {
             let localReleaseJsonPath = Path.Combine(subDirectory, '.xplm.gitrelease.json');
             let gitReleaseJson = Json.Load(localReleaseJsonPath) as GitHubRelease;
             let gitDirectory = Path.Combine(subDirectory, '.git');
             if (File.Exists(localReleaseJsonPath)) {
                 result.push({
-                    path: subDirectory,
+                    name: Path.GetFileName(subDirectory),
                     url: gitReleaseJson.html_url
                 });
             }
@@ -366,16 +361,23 @@ let PluginManager = () => {
                 let remotes = await gitManager.getRemotes(subDirectory);
                 let fetchUrl = remotes.find(item => item.type == 'fetch')?.url;
                 result.push({
-                    path: subDirectory,
+                    name: Path.GetFileName(subDirectory),
                     url: fetchUrl ?? ""
                 });
             }
         }
         return result;
     };
+    let removeLocalSubscriber = (name: string) => {
+        let subDirectory = Path.Combine(pluginsDirectory, name);
+        if (Directory.Exists(subDirectory)) {
+            deleteDirectory(subDirectory);
+        }
+    };
     return {
         updateSubscribers,
-        getLocalSubscribers
+        getLocalSubscribers,
+        removeLocalSubscriber
     };
 };
 
@@ -715,12 +717,10 @@ let Client = () => {
             await downloadToDefaultDirectory(fileID, fileName);
         });
         server.use(`/api/v1/xplm/getLocalSubscribers`, async () => {
-            return (await pluginManager.getLocalSubscribers()).map(item => {
-                return {
-                    url: item.url,
-                    path: Path.GetFileName(item.path)
-                }
-            });
+            return await pluginManager.getLocalSubscribers();
+        });
+        server.use(`/api/v1/xplm/removeLocalSubscriber`, async (name: string) => {
+            return pluginManager.removeLocalSubscriber(name);
         });
 
     };

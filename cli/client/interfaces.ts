@@ -47,3 +47,8 @@ export interface PluginSubscriber {
     name: string,
     type: 'git-release' | 'git-repository'
 }
+
+export interface LocalSubscriber {
+    name: string,
+    url: string
+}
