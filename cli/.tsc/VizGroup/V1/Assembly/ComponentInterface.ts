@@ -1,9 +1,13 @@
 import { Guid } from "../../../System/Guid";
 import { ObjectInterface } from "../../../TidyHPC/LiteDB/ObjectInterface";
 import { Database } from "../../../TidyHPC/LiteDB/Database";
+import { AttributeInterface } from "./AttributeInterface";
 import { Type } from "../../../System/Type";
 export class ComponentInterface {
     public GetAttributesCount(database?: Database): Promise<number> {
+        return {} as any;
+    }
+    public ForeachAttributes(database?: Database, onItem?: ((arg0?:AttributeInterface)=>void)): Promise<void> {
         return {} as any;
     }
     public Update(database?: Database): Promise<void> {

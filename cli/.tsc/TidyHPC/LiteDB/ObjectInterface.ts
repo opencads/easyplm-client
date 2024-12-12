@@ -1,7 +1,9 @@
+import { Field } from "./Metas/Field";
 import { FieldType } from "./Metas/FieldType";
 import { FieldMapType } from "./Metas/FieldMapType";
 import { Guid } from "../../System/Guid";
-import { Field } from "./Metas/Field";
+import { JsonValueKind } from "../../System/Text/Json/JsonValueKind";
+import { String } from "../../System/String";
 import { Type } from "../../System/Type";
 export class ObjectInterface {
     public AddMasterField(name?: string): void {
@@ -14,6 +16,9 @@ export class ObjectInterface {
         return {} as any;
     }
     public AddArrayField(name?: string, type?: FieldType, arrayLength?: number): void {
+        return {} as any;
+    }
+    public Initialize(onSelf?: ((arg0?:ObjectInterface)=>void)): ObjectInterface {
         return {} as any;
     }
     public GetSize(): number {

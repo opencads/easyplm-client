@@ -2,7 +2,11 @@ import { Guid } from "../../../System/Guid";
 import { Version } from "../../../System/Version";
 import { ObjectInterface } from "../../../TidyHPC/LiteDB/ObjectInterface";
 import { Database } from "../../../TidyHPC/LiteDB/Database";
+import { ComponentInterface } from "./ComponentInterface";
 import { DataNodeInterface } from "./DataNodeInterface";
+import { AttributeInterface } from "./AttributeInterface";
+import { ReferenceInterface } from "./ReferenceInterface";
+import { String } from "../../../System/String";
 import { Type } from "../../../System/Type";
 export class NodeInstanceInterface {
     public GetComponentsCount(database?: Database): Promise<number> {
@@ -15,6 +19,18 @@ export class NodeInstanceInterface {
         return {} as any;
     }
     public GetReferencesCount(database?: Database): Promise<number> {
+        return {} as any;
+    }
+    public ForeachComponents(database?: Database, onItem?: ((arg0?:ComponentInterface)=>void)): Promise<void> {
+        return {} as any;
+    }
+    public ForeachDataSet(database?: Database, onItem?: ((arg0?:DataNodeInterface)=>void)): Promise<void> {
+        return {} as any;
+    }
+    public ForeachAttributes(database?: Database, onItem?: ((arg0?:AttributeInterface)=>void)): Promise<void> {
+        return {} as any;
+    }
+    public ForeachReferences(database?: Database, onItem?: ((arg0?:ReferenceInterface)=>void)): Promise<void> {
         return {} as any;
     }
     public GetFirstDataNode(database?: Database): Promise<DataNodeInterface> {

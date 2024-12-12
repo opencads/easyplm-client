@@ -1,6 +1,7 @@
 import { Guid } from "../../../System/Guid";
 import { ObjectInterface } from "../../../TidyHPC/LiteDB/ObjectInterface";
 import { Database } from "../../../TidyHPC/LiteDB/Database";
+import { Task } from "../../../System/Threading/Tasks/Task";
 import { Type } from "../../../System/Type";
 export class DataNodeInterface {
     public Update(database?: Database): Promise<void> {
@@ -26,7 +27,7 @@ export class DataNodeInterface {
     public static New(): DataNodeInterface {
         return {} as any;
     }
-    public static Allocate(database?: Database, type_or_onInitial?: number | ((arg0?:DataNodeInterface)=>Promise<void>), uri?: string): Promise<DataNodeInterface> {
+    public static Allocate(database?: Database, type_or_onInitial?: number | ((arg0?:DataNodeInterface)=>void) | ((arg0?:DataNodeInterface)=>Promise<void>), uri?: string): Promise<DataNodeInterface> {
         return {} as any;
     }
     public Target?: any;

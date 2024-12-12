@@ -1,4 +1,5 @@
 import { TaskService } from "../TaskService";
+import { PluginInterface } from "./PluginInterface";
 import { Type } from "../../../../System/Type";
 export class PluginCollection {
     public ReloadPlugins(): void {
@@ -8,6 +9,9 @@ export class PluginCollection {
         return {} as any;
     }
     public ContainsPlugin(pluginName?: string): boolean {
+        return {} as any;
+    }
+    public GetPlugins(onItem?: ((arg0?:PluginInterface)=>void)): void {
         return {} as any;
     }
     public InstallPackage(packageName?: string): Promise<void> {
@@ -30,10 +34,10 @@ export class PluginCollection {
     public get TaskService(): TaskService {
         return {} as any;
     }
-    public get OnLoadedPlugins(): ()=>void {
+    public get OnLoadedPlugins(): (()=>void) {
         return {} as any;
     }
-    public set OnLoadedPlugins(value: ()=>void) {
+    public set OnLoadedPlugins(value: (()=>void)) {
     }
     public get Enable(): boolean {
         return {} as any;

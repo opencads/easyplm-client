@@ -2,9 +2,10 @@ import { IRequest } from "./Interfaces/IRequest";
 import { IResponse } from "./Interfaces/IResponse";
 import { SessionCache } from "./SessionCache";
 import { SessionSetter } from "./SessionSetter";
+import { Task } from "../../../System/Threading/Tasks/Task";
 import { Type } from "../../../System/Type";
 export class Session {
-    public Complete(onComplete?: (()=>Promise<void>) | ()=>void): Promise<void> | void {
+    public Complete(onComplete?: (()=>Promise<void>) | (()=>void)): Promise<void> | void {
         return {} as any;
     }
     public Dispose(): void {

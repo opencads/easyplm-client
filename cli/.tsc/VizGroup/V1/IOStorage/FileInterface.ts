@@ -2,8 +2,12 @@ import { Guid } from "../../../System/Guid";
 import { DateTime } from "../../../System/DateTime";
 import { ObjectInterface } from "../../../TidyHPC/LiteDB/ObjectInterface";
 import { Database } from "../../../TidyHPC/LiteDB/Database";
+import { String } from "../../../System/String";
 import { Type } from "../../../System/Type";
 export class FileInterface {
+    public ForeachChunkMD5Set(database?: Database, onChunkMD5?: ((arg0?:string)=>void)): Promise<void> {
+        return {} as any;
+    }
     public GetType(): Type {
         return {} as any;
     }

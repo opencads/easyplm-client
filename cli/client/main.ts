@@ -19,6 +19,7 @@ import { axios } from '../.tsc/Cangjie/TypeSharp/System/axios';
 import { zip } from '../.tsc/Cangjie/TypeSharp/System/zip';
 import { GitHubRelease } from "./git-interfaces";
 import { stringUtils } from "../.tsc/Cangjie/TypeSharp/System/stringUtils";
+import { PluginInterface } from '../.tsc/VizGroup/V1/TaskQueues/Plugins/PluginInterface';
 
 
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
@@ -674,6 +675,16 @@ let Client = () => {
         console.log(`downloaded ${fileID} to ${filePath}`);
     };
 
+    let getPlugins = () => {
+        let result = [] as PluginInterface[];
+        server.serviceScope.TaskService.PluginCollection.GetPlugins(item => {
+            if (item) {
+                result.push(item);
+            }
+        });
+        return result;
+    };
+
     registerService = () => {
         server.use(`/api/v1/xplm/import`, async (data: ImportInterface[]) => {
             return await importDocumentsToDirectory(data);
@@ -723,6 +734,9 @@ let Client = () => {
         });
         server.use(`/api/v1/xplm/removeLocalSubscriber`, async (name: string) => {
             return pluginManager.removeLocalSubscriber(name);
+        });
+        server.use(`/api/v1/xplm/getPlugins`, async () => {
+            return getPlugins();
         });
 
     };

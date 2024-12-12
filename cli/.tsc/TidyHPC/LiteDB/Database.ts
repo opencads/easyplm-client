@@ -1,5 +1,6 @@
 import { Debugger } from "./Debuggers/Debugger";
 import { ObjectInterface } from "./ObjectInterface";
+import { Json } from "../LiteJson/Json";
 import { Guid } from "../../System/Guid";
 import { RecordIndex } from "./RecordIndex";
 import { Type } from "../../System/Type";
@@ -14,6 +15,9 @@ export class Database {
         return {} as any;
     }
     public RegisterInterface(objectInterface?: ObjectInterface): Promise<void> {
+        return {} as any;
+    }
+    public All(interfaceName?: string, onRecord?: ((arg0?:any)=>void)): Promise<void> {
         return {} as any;
     }
     public GetRecordAddressesByIndexArray(interfaceName?: string, indexName?: string, indexValue?: any): Promise<number[]> {

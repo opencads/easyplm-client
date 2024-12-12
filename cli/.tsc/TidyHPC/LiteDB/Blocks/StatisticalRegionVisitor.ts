@@ -1,7 +1,16 @@
 import { StatisticalBlock } from "./StatisticalBlock";
 import { Database } from "../Database";
+import { Byte } from "../../../System/Byte";
+import { Int32 } from "../../../System/Int32";
+import { Boolean } from "../../../System/Boolean";
 import { Type } from "../../../System/Type";
 export class StatisticalRegionVisitor {
+    public Read(table?: Database, onBuffer?: ((arg0?:number[], arg1?:number)=>void)): Promise<void> {
+        return {} as any;
+    }
+    public Write(table?: Database, onBuffer?: ((arg0?:number[], arg1?:number)=>void)): Promise<void> {
+        return {} as any;
+    }
     public Update(table?: Database, onBuffer?: ((arg0?:number[], arg1?:number)=>boolean)): Promise<void> {
         return {} as any;
     }

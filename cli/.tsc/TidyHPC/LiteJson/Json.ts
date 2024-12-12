@@ -1,6 +1,12 @@
 import { JsonValueKind } from "../../System/Text/Json/JsonValueKind";
 import { Stream } from "../../System/IO/Stream";
+import { ObjectWrapper } from "./ObjectWrapper";
+import { ArrayWrapper } from "./ArrayWrapper";
+import { Int32 } from "../../System/Int32";
+import { Boolean } from "../../System/Boolean";
+import { String } from "../../System/String";
 import { JsonNode } from "../../System/Text/Json/Nodes/JsonNode";
+import { Object } from "../../System/Object";
 import { JsonElement } from "../../System/Text/Json/JsonElement";
 import { SByte } from "../../System/SByte";
 import { Int16 } from "../../System/Int16";
@@ -9,10 +15,12 @@ import { DateTime } from "../../System/DateTime";
 import { TimeSpan } from "../../System/TimeSpan";
 import { Guid } from "../../System/Guid";
 import { Type } from "../../System/Type";
-import { KeyValuePair`2 } from "../../System/Collections/Generic/KeyValuePair`2[[System/String, System/Private/CoreLib, Version=8/0/0/0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System/Object, System/Private/CoreLib, Version=8/0/0/0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]";
-import { Object } from "../../System/Object";
+import { Exception } from "../../System/Exception";
 export class Json {
     public GetValueKind(): JsonValueKind {
+        return {} as any;
+    }
+    public Process(onProcess?: ((arg0?:any)=>void)): void {
         return {} as any;
     }
     public Clone(): any {
@@ -30,10 +38,10 @@ export class Json {
     public WriteTo(stream?: Stream): void {
         return {} as any;
     }
-    public AssertObject(): void {
+    public AssertObject(onObject?: ((arg0?:ObjectWrapper)=>void)): void {
         return {} as any;
     }
-    public AssertArray(): void {
+    public AssertArray(onArray?: ((arg0?:any[])=>void)): void {
         return {} as any;
     }
     public Dispose(): void {
@@ -45,7 +53,13 @@ export class Json {
     public ToArray(selector?: null): null {
         return {} as any;
     }
+    public ForeachArray(onEach_or_onIndex?: ((arg0?:any)=>void) | ((arg0?:number, arg1?:any)=>void)): void {
+        return {} as any;
+    }
     public SelectArray(selector?: null): null {
+        return {} as any;
+    }
+    public ForeachObject(onValue_or_onKeyValuePair?: ((arg0?:any)=>void) | ((arg0?:string, arg1?:any)=>void)): void {
         return {} as any;
     }
     public Equals(other?: any): boolean {
@@ -263,7 +277,7 @@ export class Json {
     public get IsObject(): boolean {
         return {} as any;
     }
-    public get AsObject(): System.Collections.Generic.KeyValuePair`2[System.String,System.Object][] {
+    public get AsObject(): ObjectWrapper {
         return {} as any;
     }
     public get IsArray(): boolean {

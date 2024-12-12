@@ -1,3 +1,4 @@
+import { Field } from "./Metas/Field";
 import { FieldType } from "./Metas/FieldType";
 import { FieldMapType } from "./Metas/FieldMapType";
 import { ObjectInterface } from "./ObjectInterface";
@@ -14,6 +15,9 @@ export class ObjectInterfaceRuntime {
         return {} as any;
     }
     public AddArrayField(name?: string, type?: FieldType, arrayLength?: number): void {
+        return {} as any;
+    }
+    public Initialize(onSelf?: ((arg0?:ObjectInterface)=>void)): ObjectInterface {
         return {} as any;
     }
     public GetSize(): number {
