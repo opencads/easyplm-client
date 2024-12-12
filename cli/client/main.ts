@@ -335,7 +335,7 @@ let PluginManager = () => {
         let subscribers = localConfig.getPluginSubscribers();
         for (let subscriber of subscribers) {
             let outputDirectory = Path.Combine(pluginsDirectory, subscriber.name);
-            if(!Directory.Exists(outputDirectory)){
+            if (!Directory.Exists(outputDirectory)) {
                 Directory.CreateDirectory(outputDirectory);
             }
             if (subscriber.type == 'git-release') {
@@ -352,9 +352,9 @@ let PluginManager = () => {
         let result = [] as LocalSubscriber[];
         for (let subDirectory of subDirectories) {
             let localReleaseJsonPath = Path.Combine(subDirectory, '.xplm.gitrelease.json');
-            let gitReleaseJson = Json.Load(localReleaseJsonPath) as GitHubRelease;
             let gitDirectory = Path.Combine(subDirectory, '.git');
             if (File.Exists(localReleaseJsonPath)) {
+                let gitReleaseJson = Json.Load(localReleaseJsonPath) as GitHubRelease;
                 result.push({
                     name: Path.GetFileName(subDirectory),
                     url: gitReleaseJson.html_url
