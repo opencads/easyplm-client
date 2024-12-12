@@ -18,6 +18,7 @@ import { FileStream } from '../.tsc/System/IO/FileStream';
 import { axios } from '../.tsc/Cangjie/TypeSharp/System/axios';
 import { zip } from '../.tsc/Cangjie/TypeSharp/System/zip';
 import { GitHubRelease } from "./git-interfaces";
+import { stringUtils } from "../.tsc/Cangjie/TypeSharp/System/stringUtils";
 
 
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
@@ -245,9 +246,9 @@ let GitManager = () => {
         }
     };
     let getRemotes = async (outputDirectory: string) => {
-        let cmdResult = await cmdAsync(outputDirectory, `git remote -v`,{
-            redirect:true,
-            useShellExecute:false
+        let cmdResult = await cmdAsync(outputDirectory, `git remote -v`, {
+            redirect: true,
+            useShellExecute: false
         });
         console.log(cmdResult);
         let lines = (cmdResult.output ?? "").replace('\r', '').split('\n');
@@ -255,13 +256,15 @@ let GitManager = () => {
         for (let line of lines) {
             let items = line.split('\t');
             if (items.length == 3) {
+                let subItems = items[1].split(' ');
                 result.push({
                     name: items[0],
-                    url: items[1].replace('(fetch)', '').replace('(push)', ''),
-                    type: items[2] == '(fetch)' ? 'fetch' : 'push'
+                    url: subItems[0],
+                    type: stringUtils.trim(subItems[1], '()') as any
                 });
             }
         }
+        console.log(result);
         return result;
     };
     return {
