@@ -250,7 +250,6 @@ let GitManager = () => {
             redirect: true,
             useShellExecute: false
         });
-        console.log(cmdResult);
         let lines = (cmdResult.output ?? "").replace('\r', '').split('\n');
         let result = [] as GitRemote[];
         for (let line of lines) {
@@ -264,7 +263,6 @@ let GitManager = () => {
                 });
             }
         }
-        console.log(result);
         return result;
     };
     return {
@@ -389,6 +387,7 @@ let pluginManager = PluginManager();
 let Client = () => {
     let server = new Server();
     server.ApplicationConfig.PluginsDirectory = pluginsDirectory;
+    console.log(server.ApplicationConfig);
     let db: database;
     let databaseInterfaces = DatabaseInterfaces();
     let localConfig = LocalConfig();
