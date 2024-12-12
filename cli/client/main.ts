@@ -255,7 +255,7 @@ let GitManager = () => {
         let result = [] as GitRemote[];
         for (let line of lines) {
             let items = line.split('\t');
-            if (items.length == 3) {
+            if (items.length == 2) {
                 let subItems = items[1].split(' ');
                 result.push({
                     name: items[0],
