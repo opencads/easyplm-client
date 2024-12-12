@@ -45,4 +45,5 @@ export interface DirectoryInterface {
 export interface PluginSubscriber {
     url: string,
     name: string,
+    type: 'git-release' | 'git-repository'
 }

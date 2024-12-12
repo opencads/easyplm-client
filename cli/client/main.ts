@@ -1,4 +1,4 @@
-import { args, env, md5 } from '../.tsc/context';
+import { args, cmdAsync, env, execAsync, md5 } from '../.tsc/context';
 import { database } from '../.tsc/Cangjie/TypeSharp/System/database';
 import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInterface';
 import { Console } from '../.tsc/System/Console';
@@ -165,35 +165,36 @@ let DatabaseInterfaces = () => {
     };
 };
 
-let getGitInfo = (url: string) => {
-    // https://github.com/opencads/xplm-ui-home.git
-    if (url.endsWith(".git")) {
-        url = url.substring(0, url.length - 4);
-    }
-    if (url.startsWith("https://")) {
-        url = url.substring(8);
-    }
-    else if (url.startsWith("http://")) {
-        url = url.substring(7);
-    }
-    let items = url.split("/");
-    if (items.length > 2) {
-        return {
-            success: true,
-            owner: items[1],
-            repo: items[2]
-        }
-    }
-    else {
-        return {
-            success: false,
-            owner: "",
-            repo: ""
-        }
-    }
-}
 
-let ReleaseDownloader = () => {
+
+let GitManager = () => {
+    let getGitInfo = (url: string) => {
+        // https://github.com/opencads/xplm-ui-home.git
+        if (url.endsWith(".git")) {
+            url = url.substring(0, url.length - 4);
+        }
+        if (url.startsWith("https://")) {
+            url = url.substring(8);
+        }
+        else if (url.startsWith("http://")) {
+            url = url.substring(7);
+        }
+        let items = url.split("/");
+        if (items.length > 2) {
+            return {
+                success: true,
+                owner: items[1],
+                repo: items[2]
+            }
+        }
+        else {
+            return {
+                success: false,
+                owner: "",
+                repo: ""
+            }
+        }
+    };
     // 根据git release下载、判断是否更新等功能
     let getLatestRelease = async (owner: string, repo: string) => {
         // 构造用于获取最新发布的 GitHub API URL
@@ -212,10 +213,10 @@ let ReleaseDownloader = () => {
         }
 
     };
-    let download = async (owner: string, repo: string, outputDirectory: string) => {
+    let downloadRelease = async (owner: string, repo: string, outputDirectory: string) => {
         let latestRelease = await getLatestRelease(owner, repo);
         let lastRelease = {} as GitHubRelease;
-        let localReleaseJsonPath = Path.Combine(outputDirectory, '.gitrelease.json');
+        let localReleaseJsonPath = Path.Combine(outputDirectory, '.xplm.gitrelease.json');
         if (File.Exists(localReleaseJsonPath)) {
             lastRelease = Json.Load(localReleaseJsonPath);
         }
@@ -236,13 +237,48 @@ let ReleaseDownloader = () => {
             File.WriteAllText(localReleaseJsonPath, JSON.stringify(latestRelease));
         }
     };
+    let cloneRepository = async (url: string, outputDirectory: string) => {
+        let gitDirectory = Path.Combine(outputDirectory, '.git');
+        if (Directory.Exists(gitDirectory)) {
+            await cmdAsync(outputDirectory, `git pull`);
+        }
+        else {
+            await cmdAsync(outputDirectory, `git clone ${url} .`);
+        }
+    };
+    let getRemotes = async (outputDirectory: string) => {
+        let cmdResult = await cmdAsync(outputDirectory, `git remote -v`);
+        let lines = cmdResult.output?.replace('\r', '').split('\n');
+        if (lines == undefined) {
+            return [];
+        }
+        let result = [] as {
+            name: string,
+            url: string,
+            type: 'fetch' | 'push'
+        }[];
+        for (let line of lines) {
+            let items = line.split('\t');
+            if (items.length == 3) {
+                result.push({
+                    name: items[0],
+                    url: items[1].replace('(fetch)', '').replace('(push)', ''),
+                    type: items[2] == '(fetch)' ? 'fetch' : 'push'
+                });
+            }
+        }
+        return result;
+    };
     return {
+        getGitInfo,
         getLatestRelease,
-        download
+        downloadRelease,
+        cloneRepository,
+        getRemotes
     };
 };
 
-let releaseDownloader = ReleaseDownloader();
+let gitManager = GitManager();
 
 let LocalConfig = () => {
     let filePath = Path.Combine(appDataDirectory, 'config.json');
@@ -301,12 +337,45 @@ let PluginManager = () => {
         let subscribers = localConfig.getPluginSubscribers();
         for (let subscriber of subscribers) {
             let outputDirectory = Path.Combine(pluginsDirectory, subscriber.name);
-            let gitInfo = getGitInfo(subscriber.url);
-            await releaseDownloader.download(gitInfo.owner, gitInfo.repo, outputDirectory);
+            if (subscriber.type == 'git-release') {
+                let gitInfo = gitManager.getGitInfo(subscriber.url);
+                await gitManager.downloadRelease(gitInfo.owner, gitInfo.repo, outputDirectory);
+            }
+            else if (subscriber.type == 'git-repository') {
+                await gitManager.cloneRepository(subscriber.url, outputDirectory);
+            }
         }
     };
+    let getLocalSubscribers = async () => {
+        let subDirectories = Directory.GetDirectories(pluginsDirectory);
+        let result = [] as {
+            path: string,
+            url: string
+        }[];
+        for (let subDirectory of subDirectories) {
+            let localReleaseJsonPath = Path.Combine(subDirectory, '.xplm.gitrelease.json');
+            let gitReleaseJson = Json.Load(localReleaseJsonPath) as GitHubRelease;
+            let gitDirectory = Path.Combine(subDirectory, '.git');
+            if (File.Exists(localReleaseJsonPath)) {
+                result.push({
+                    path: subDirectory,
+                    url: gitReleaseJson.html_url
+                });
+            }
+            else if (File.Exists(gitDirectory)) {
+                let remotes = await gitManager.getRemotes(subDirectory);
+                let fetchUrl = remotes.find(item => item.type == 'fetch')?.url;
+                result.push({
+                    path: subDirectory,
+                    url: fetchUrl ?? ""
+                });
+            }
+        }
+        return result;
+    };
     return {
-        updateSubscribers
+        updateSubscribers,
+        getLocalSubscribers
     };
 };
 
@@ -600,6 +669,7 @@ let Client = () => {
         await server.storageService.exportContentToFilePath(fileInterface.FullContentMD5, filePath);
         console.log(`downloaded ${fileID} to ${filePath}`);
     };
+
     registerService = () => {
         server.use(`/api/v1/xplm/import`, async (data: ImportInterface[]) => {
             return await importDocumentsToDirectory(data);
@@ -643,6 +713,9 @@ let Client = () => {
         });
         server.use(`/api/v1/xplm/downloadToDefaultDirectory`, async (fileID: Guid, fileName: string) => {
             await downloadToDefaultDirectory(fileID, fileName);
+        });
+        server.use(`/api/v1/xplm/getLocalSubscribers`, async () => {
+            return await pluginManager.getLocalSubscribers();
         });
 
     };
