@@ -50,5 +50,6 @@ export interface PluginSubscriber {
 
 export interface LocalSubscriber {
     name: string,
-    url: string
+    url: string,
+    type: 'fetch' | 'push'
 }

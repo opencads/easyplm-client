@@ -245,24 +245,29 @@ let GitManager = () => {
         }
     };
     let getRemotes = async (outputDirectory: string) => {
+        console.log(1);
         let cmdResult = await cmdAsync(outputDirectory, `git remote -v`);
+        console.log(2);
         let lines = cmdResult.output?.replace('\r', '').split('\n');
+        console.log(3);
         if (lines == undefined) {
             return [];
         }
-        let result = [] as {
-            name: string,
-            url: string,
-            type: 'fetch' | 'push'
-        }[];
+        console.log(4);
+        let result = [] as LocalSubscriber[];
+        console.log(5);
         for (let line of lines) {
+            console.log(6);
             let items = line.split('\t');
+            console.log(7);
             if (items.length == 3) {
+                console.log(8);
                 result.push({
                     name: items[0],
                     url: items[1].replace('(fetch)', '').replace('(push)', ''),
                     type: items[2] == '(fetch)' ? 'fetch' : 'push'
                 });
+                console.log(9);
             }
         }
         return result;
