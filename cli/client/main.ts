@@ -715,7 +715,12 @@ let Client = () => {
             await downloadToDefaultDirectory(fileID, fileName);
         });
         server.use(`/api/v1/xplm/getLocalSubscribers`, async () => {
-            return await pluginManager.getLocalSubscribers();
+            return (await pluginManager.getLocalSubscribers()).map(item => {
+                return {
+                    url: item.url,
+                    path: Path.GetFileName(item.path)
+                }
+            });
         });
 
     };
