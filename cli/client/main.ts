@@ -360,7 +360,7 @@ let PluginManager = () => {
                     url: gitReleaseJson.html_url
                 });
             }
-            else if (File.Exists(gitDirectory)) {
+            else if (Directory.Exists(gitDirectory)) {
                 let remotes = await gitManager.getRemotes(subDirectory);
                 let fetchUrl = remotes.find(item => item.type == 'fetch')?.url;
                 result.push({
