@@ -50,6 +50,11 @@ export interface PluginSubscriber {
 
 export interface LocalSubscriber {
     name: string,
+    url: string
+}
+
+export interface GitRemote {
     url: string,
-    type: 'fetch' | 'push'
+    name: string
+    type:'fetch'|'push'
 }

@@ -4,7 +4,7 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DirectoryInterface, DocumentInterface, ImportInterface, LocalSubscriber, PluginSubscriber } from './interfaces';
+import { DirectoryInterface, DocumentInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -254,7 +254,7 @@ let GitManager = () => {
             return [];
         }
         console.log(4);
-        let result = [] as LocalSubscriber[];
+        let result = [] as GitRemote[];
         console.log(5);
         for (let line of lines) {
             console.log(6);
