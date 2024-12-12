@@ -355,7 +355,7 @@ let PluginManager = () => {
                 });
             }
             else if (Directory.Exists(gitDirectory)) {
-                let remotes = await gitManager.getRemotes(subDirectory);
+                let remotes = await gitManager.getRemotes(gitDirectory);
                 let fetchUrl = remotes.find(item => item.type == 'fetch')?.url;
                 result.push({
                     name: Path.GetFileName(subDirectory),
