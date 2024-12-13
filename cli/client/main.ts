@@ -553,6 +553,9 @@ let Client = () => {
         for (let directoryRecord of directoryRecords) {
             let documentIDs = directoryRecord.documents;
             for (let documentID of documentIDs) {
+                if (documentID == Guid.Empty) {
+                    continue;
+                }
                 let record = await db.findByMaster(databaseInterfaces.documentInterface.name, documentID) as DocumentInterface;
                 records.push(record);
             }
