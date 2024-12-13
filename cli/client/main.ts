@@ -413,7 +413,7 @@ let Client = () => {
         let fileName = data.filePath == undefined ? "" : Path.GetFileName(data.filePath);
         let formatFileName = "";
         if (fileName != "") {
-            let formatFileName = digitFileExtensionReg.Replace(fileName, "");
+            formatFileName = digitFileExtensionReg.Replace(fileName, "");
         }
         let contentMD5 = "";
         if (data.filePath != undefined && (File.Exists(data.filePath))) {
@@ -438,7 +438,8 @@ let Client = () => {
             ...abstract,
             key: abstractMD5,
             originFileName: fileName,
-            formatFileName: formatFileName
+            formatFileName: formatFileName,
+            lowerFormatFileName: formatFileName.toLowerCase()
         }
     };
     let tryAddToDirectory = async (directory: string, documentIDs: Guid[]) => {
@@ -567,6 +568,7 @@ let Client = () => {
         let mapPartNumber0ToRecord = {} as { [key: string]: DocumentInterface };
         let mapPartNumber1ToRecord = {} as { [key: string]: DocumentInterface };
         let mapPartNumber2ToRecord = {} as { [key: string]: DocumentInterface };
+
         for (let record of records) {
             if (record.lowerFormatFileName.length > 0) {
                 if (mapFileNameToRecord[record.lowerFormatFileName]) {
@@ -639,6 +641,14 @@ let Client = () => {
                 }
             }
         }
+        console.log(`mapFileNameToRecord = ${mapFileNameToRecord}`);
+        console.log(`mapDocumentNumber0ToRecord = ${mapDocumentNumber0ToRecord}`);
+        console.log(`mapDocumentNumber1ToRecord = ${mapDocumentNumber1ToRecord}`);
+        console.log(`mapDocumentNumber2ToRecord = ${mapDocumentNumber2ToRecord}`);
+        console.log(`mapPartNumber0ToRecord = ${mapPartNumber0ToRecord}`);
+        console.log(`mapPartNumber1ToRecord = ${mapPartNumber1ToRecord}`);
+        console.log(`mapPartNumber2ToRecord = ${mapPartNumber2ToRecord}`);
+
         let result = [] as DocumentInterface[];
         let keys = Object.keys(mapFileNameToRecord);
         for (let key of keys) {
