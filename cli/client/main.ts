@@ -458,9 +458,11 @@ let Client = () => {
         }
         else {
             for (let directoryRecord of directoryRecords) {
-                let documents = directoryRecord.documents;
-                
-                documents = documents.filter(item => item != Guid.Empty);
+                let documents = directoryRecord.documents;                
+                documents = documents.filter(item => {
+                    console.log(`item ${item.GetType().FullName} ${item}`);
+                    return item != Guid.Empty;
+                });
                 let isUpdated = false;
                 for (let documentID of [...documentIDs]) {
                     if (documents.indexOf(documentID) == -1 && (documents.length < 32)) {
