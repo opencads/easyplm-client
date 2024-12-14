@@ -458,11 +458,8 @@ let Client = () => {
         }
         else {
             for (let directoryRecord of directoryRecords) {
-                let documents = directoryRecord.documents;                
-                documents = documents.filter(item => {
-                    console.log(`item ${item.GetType().FullName} ${item}`);
-                    return item != Guid.Empty;
-                });
+                let documents = directoryRecord.documents;
+                documents = documents.filter(item => item != Guid.Empty);
                 let isUpdated = false;
                 for (let documentID of [...documentIDs]) {
                     if (documents.indexOf(documentID) == -1 && (documents.length < 32)) {
@@ -649,13 +646,6 @@ let Client = () => {
                 }
             }
         }
-        console.log(`mapFileNameToRecord = ${mapFileNameToRecord}`);
-        console.log(`mapDocumentNumber0ToRecord = ${mapDocumentNumber0ToRecord}`);
-        console.log(`mapDocumentNumber1ToRecord = ${mapDocumentNumber1ToRecord}`);
-        console.log(`mapDocumentNumber2ToRecord = ${mapDocumentNumber2ToRecord}`);
-        console.log(`mapPartNumber0ToRecord = ${mapPartNumber0ToRecord}`);
-        console.log(`mapPartNumber1ToRecord = ${mapPartNumber1ToRecord}`);
-        console.log(`mapPartNumber2ToRecord = ${mapPartNumber2ToRecord}`);
 
         let result = [] as DocumentInterface[];
         let keys = Object.keys(mapFileNameToRecord);
