@@ -38,6 +38,10 @@ let pluginsDirectory = Path.Combine(appDataDirectory, 'plugins');
 if (Directory.Exists(pluginsDirectory) == false) {
     Directory.CreateDirectory(pluginsDirectory);
 }
+let databaseDirectory = Path.Combine(appDataDirectory, 'database');
+if (Directory.Exists(databaseDirectory) == false) {
+    Directory.CreateDirectory(databaseDirectory);
+}
 let DatabaseInterfaces = () => {
     let documentInterface = {
         name: 'xplm/document',
@@ -388,6 +392,7 @@ let pluginManager = PluginManager();
 let Client = () => {
     let server = new Server();
     server.ApplicationConfig.PluginsDirectory = pluginsDirectory;
+    server.ApplicationConfig.DatabasePath = Path.Combine(databaseDirectory, `${Environment.UserName}.db`);
     console.log(server.ApplicationConfig);
     let db: database;
     let databaseInterfaces = DatabaseInterfaces();
