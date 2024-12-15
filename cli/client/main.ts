@@ -756,6 +756,7 @@ let Client = () => {
                 result.untrackedFiles.push(file);
             }
             else {
+                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime} = ${fileUtils.lastWriteTime(file)} `);
                 if (document.fileLastWriteTime != fileUtils.lastWriteTime(file)) {
                     result.modifiedDocuments.push(document);
                 }
