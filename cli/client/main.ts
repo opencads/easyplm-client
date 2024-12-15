@@ -758,9 +758,11 @@ let Client = () => {
             else {
                 console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime} = ${fileUtils.lastWriteTime(file)} = ${document.fileLastWriteTime != fileUtils.lastWriteTime(file)}`);
                 if (document.fileLastWriteTime != fileUtils.lastWriteTime(file)) {
+                    console.log(`is modified`);
                     result.modifiedDocuments.push(document);
                 }
                 else if (document.fileLength != fileUtils.size(file)) {
+                    console.log(`document.fileLength = ${document.fileLength} != ${fileUtils.size(file)}`);
                     result.modifiedDocuments.push(document);
                 }
                 else result.documents.push(document);
