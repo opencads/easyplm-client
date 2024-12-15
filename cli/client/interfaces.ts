@@ -34,6 +34,8 @@ export interface DocumentInterface {
     partRemoteID: string,
     displayName: string,
     createTime: DateTime,
+    fileLastWriteTime: DateTime,
+    fileLength: number
 }
 
 export interface DirectoryInterface {
@@ -56,5 +58,13 @@ export interface LocalSubscriber {
 export interface GitRemote {
     url: string,
     name: string
-    type:'fetch'|'push'
+    type: 'fetch' | 'push'
 }
+
+export interface ScanResult {
+    untrackedFiles: string[],
+    documents: DocumentInterface[],
+    modifiedDocuments: DocumentInterface[],
+    missingDocuments: DocumentInterface[],
+}
+

@@ -4,7 +4,7 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DirectoryInterface, DocumentInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber } from './interfaces';
+import { DirectoryInterface, DocumentInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -141,6 +141,14 @@ let DatabaseInterfaces = () => {
                 type: 'char',
                 length: 256,
                 isIndexSet: true
+            },
+            {
+                name: 'fileLastWriteTime',
+                type: 'DateTime'
+            },
+            {
+                name: 'fileLength',
+                type: 'int64'
             }
         ]
     } as databaseInterface;
@@ -413,7 +421,13 @@ let Client = () => {
         registerService();
         await pluginManager.updateSubscribers();
     };
+    let formatDirectory = (directory: string) => {
+        return directory.replace('\\', '/').toLowerCase();
+    };
     let digitFileExtensionReg = new Regex('\\.\\d+$');
+    let getLowerFormatFileName = (filePath: string) => {
+        return digitFileExtensionReg.Replace(Path.GetFileName(filePath), "").toLowerCase();
+    };
     let formatImport = (data: ImportInterface) => {
         let fileName = data.filePath == undefined ? "" : Path.GetFileName(data.filePath);
         let formatFileName = "";
@@ -444,11 +458,14 @@ let Client = () => {
             key: abstractMD5,
             originFileName: fileName,
             formatFileName: formatFileName,
-            lowerFormatFileName: formatFileName.toLowerCase()
-        }
+            lowerFormatFileName: formatFileName.toLowerCase(),
+            fileLastWriteTime: (File.Exists(data.filePath) ? fileUtils.lastWriteTime(data.filePath) : DateTime.MinValue),
+            fileLength: (File.Exists(data.filePath) ? fileUtils.size(data.filePath) : 0)
+        };
     };
     let tryAddToDirectory = async (directory: string, documentIDs: Guid[]) => {
-        let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory.toLowerCase()) as DirectoryInterface[];
+        directory = formatDirectory(directory);
+        let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory) as DirectoryInterface[];
         if (directoryRecords.length == 0) {
             let directoryRecord = {
                 path: directory.toLowerCase(),
@@ -554,7 +571,8 @@ let Client = () => {
         }
     };
     let getDocumentsByDirectory = async (directory: string) => {
-        let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory.toLowerCase()) as DirectoryInterface[];
+        directory = formatDirectory(directory);
+        let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory) as DirectoryInterface[];
         let records = [] as DocumentInterface[];
         for (let directoryRecord of directoryRecords) {
             let documentIDs = directoryRecord.documents;
@@ -686,6 +704,75 @@ let Client = () => {
         console.log(`downloaded ${fileID} to ${filePath}`);
     };
 
+    let scanDirectory = async (directory: string) => {
+        let documents = await getDocumentsByDirectory(directory);
+        let files = Directory.GetFiles(directory);
+        let result = {
+            untrackedFiles: [],
+            documents: [],
+            modifiedDocuments: [],
+            missingDocuments: [],
+        } as ScanResult;
+
+        let digitFileNameToFilePath = {} as {
+            [key: string]: {
+                filePath: string,
+                digit: number
+            }
+        };
+        let filteredFiles = [] as string[];
+        for (let file of files) {
+            if (digitFileExtensionReg.IsMatch(file)) {
+                let fileName = Path.GetFileNameWithoutExtension(file).toLowerCase();
+                let digit = Number(Path.GetExtension(file).substring(1));
+                if (digitFileNameToFilePath[fileName]) {
+                    if (digitFileNameToFilePath[fileName].digit >= digit) {
+                        filteredFiles.push(file);
+                        continue;
+                    }
+                    else if (digitFileNameToFilePath[fileName].digit < digit) {
+                        filteredFiles.push(digitFileNameToFilePath[fileName].filePath);
+                        digitFileNameToFilePath[fileName] = {
+                            filePath: file,
+                            digit
+                        };
+                    }
+                }
+                else {
+                    digitFileNameToFilePath[fileName] = {
+                        filePath: file,
+                        digit
+                    };
+                }
+            }
+        }
+        for (let file of files) {
+            if (filteredFiles.includes(file)) {
+                continue;
+            }
+            let lowerFormatFileName = getLowerFormatFileName(file);
+            let document = documents.find(item => item.lowerFormatFileName == lowerFormatFileName);
+            if (document == undefined) {
+                result.untrackedFiles.push(file);
+            }
+            else {
+                if (document.fileLastWriteTime != fileUtils.lastWriteTime(file)) {
+                    result.modifiedDocuments.push(document);
+                }
+                else if (document.fileLength != fileUtils.size(file)) {
+                    result.modifiedDocuments.push(document);
+                }
+                else result.documents.push(document);
+            }
+        }
+        for (let document of documents) {
+            if (result.documents.includes(document) == false && (result.modifiedDocuments.includes(document) == false)) {
+                result.missingDocuments.push(document);
+            }
+        }
+        return result;
+    }
+
     let getPlugins = () => {
         let result = [] as PluginInterface[];
         server.serviceScope.TaskService.PluginCollection.GetPlugins(item => {
@@ -748,6 +835,9 @@ let Client = () => {
         });
         server.use(`/api/v1/xplm/getPlugins`, async () => {
             return getPlugins();
+        });
+        server.use(`/api/v1/xplm/scanDirectory`, async (directory: string) => {
+            return await scanDirectory(directory);
         });
 
     };
