@@ -757,7 +757,7 @@ let Client = () => {
             }
             else {
                 
-                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime.GetType().Name} ${document.fileLastWriteTime} = ${fileUtils.lastWriteTime(file)} = ${document.fileLastWriteTime != fileUtils.lastWriteTime(file)}`);
+                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime.Node.GetType().Name} ${document.fileLastWriteTime} = ${fileUtils.lastWriteTime(file)} = ${document.fileLastWriteTime != fileUtils.lastWriteTime(file)}`);
                 if (document.fileLastWriteTime != fileUtils.lastWriteTime(file)) {
                     console.log(`is modified`);
                     result.modifiedDocuments.push(document);
