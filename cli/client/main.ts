@@ -756,7 +756,8 @@ let Client = () => {
                 result.untrackedFiles.push(file);
             }
             else {
-                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime.Node.GetType().Name} ${document.fileLastWriteTime} = ${fileUtils.lastWriteTime(file).ToString("O")} = ${document.fileLastWriteTime != fileUtils.lastWriteTime(file)}`);
+                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime.ToString("O")} = ${fileUtils.lastWriteTime(file).ToString("O")} = ${document.fileLastWriteTime != fileUtils.lastWriteTime(file)}`);
+                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime.Ticks} = ${fileUtils.lastWriteTime(file).Ticks}`);
                 if (document.fileLastWriteTime != fileUtils.lastWriteTime(file)) {
                     console.log(`is modified`);
                     result.modifiedDocuments.push(document);
