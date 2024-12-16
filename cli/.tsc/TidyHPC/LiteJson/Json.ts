@@ -349,6 +349,18 @@ export class Json {
     public get AsGuid(): Guid {
         return {} as any;
     }
+    public get IsDateTime(): boolean {
+        return {} as any;
+    }
+    public get AsDateTime(): DateTime {
+        return {} as any;
+    }
+    public get IsTimeSpan(): boolean {
+        return {} as any;
+    }
+    public get AsTimeSpan(): TimeSpan {
+        return {} as any;
+    }
     public get IsNull(): boolean {
         return {} as any;
     }

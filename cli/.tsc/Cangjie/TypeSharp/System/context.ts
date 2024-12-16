@@ -1,6 +1,7 @@
 import { processResult } from "./processResult";
 import { processConfig } from "./processConfig";
 import { Guid } from "../../../System/Guid";
+import { DateTime } from "../../../System/DateTime";
 import { Type } from "../../../System/Type";
 export class context {
     public GetType(): Type {
@@ -85,6 +86,9 @@ export class context {
         return {} as any;
     }
     public static md5(value?: any): string {
+        return {} as any;
+    }
+    public static toDateTime(value?: any): DateTime {
         return {} as any;
     }
     public static args: string[];

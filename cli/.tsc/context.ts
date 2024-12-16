@@ -1,6 +1,7 @@
 import { processResult } from "./Cangjie/TypeSharp/System/processResult";
 import { processConfig } from "./Cangjie/TypeSharp/System/processConfig";
 import { Guid } from "./System/Guid";
+import { DateTime } from "./System/DateTime";
 import { Type } from "./System/Type";
 export const args: string[] = 0 as any;
 export const manifest: any = 0 as any;
@@ -35,3 +36,4 @@ export const lockFile:(filePath?: string) => boolean = 0 as any
 export const unlockFile:(filePath?: string) => boolean = 0 as any
 export const env:(environmentVariable?: string) => string = 0 as any
 export const md5:(value?: any) => string = 0 as any
+export const toDateTime:(value?: any) => DateTime = 0 as any

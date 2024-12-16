@@ -20,6 +20,7 @@ import { zip } from '../.tsc/Cangjie/TypeSharp/System/zip';
 import { GitHubRelease } from "./git-interfaces";
 import { stringUtils } from "../.tsc/Cangjie/TypeSharp/System/stringUtils";
 import { PluginInterface } from '../.tsc/VizGroup/V1/TaskQueues/Plugins/PluginInterface';
+import { DateTimeUtils } from '../.tsc/Cangjie/TypeSharp/System/DateTimeUtils';
 
 
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
@@ -756,13 +757,10 @@ let Client = () => {
                 result.untrackedFiles.push(file);
             }
             else {
-                console.log(`document.fileLastWriteTime = ${document.fileLastWriteTime.Node.GetType().Name}, ${document.fileLastWriteTime.Ticks} = ${fileUtils.lastWriteTime(file).Ticks} = ${document.fileLastWriteTime != fileUtils.lastWriteTime(file)}`);
-                if (document.fileLastWriteTime != fileUtils.lastWriteTime(file)) {
-                    console.log(`is modified`);
+                if (DateTimeUtils.isSameWithMillisecond(document.fileLastWriteTime, fileUtils.lastWriteTime(file)) == false) {
                     result.modifiedDocuments.push(document);
                 }
                 else if (document.fileLength != fileUtils.size(file)) {
-                    console.log(`document.fileLength = ${document.fileLength} != ${fileUtils.size(file)}`);
                     result.modifiedDocuments.push(document);
                 }
                 else result.documents.push(document);
