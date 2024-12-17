@@ -61,6 +61,10 @@ export interface GitRemote {
     type: 'fetch' | 'push'
 }
 
+export interface DocumentWithRawJsonInterface extends DocumentInterface {
+    rawJson: any
+}
+
 export interface ScanResult {
     untrackedFiles: string[],
     documents: DocumentInterface[],

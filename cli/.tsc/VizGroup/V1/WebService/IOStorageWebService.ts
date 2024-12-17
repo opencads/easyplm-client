@@ -10,6 +10,9 @@ export class IOStorageWebService {
     public Download(fileId?: Guid): Promise<MultiplyStreamAttachment> {
         return {} as any;
     }
+    public Get(contentMD5?: string): Promise<MultiplyStreamAttachment> {
+        return {} as any;
+    }
     public GetType(): Type {
         return {} as any;
     }

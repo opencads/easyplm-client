@@ -1,6 +1,6 @@
 import { DateTime } from "../../../System/DateTime";
 import { Type } from "../../../System/Type";
-export class DateTimeUtils {
+export class datetimeUtils {
     public GetType(): Type {
         return {} as any;
     }

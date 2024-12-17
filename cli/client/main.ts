@@ -4,7 +4,7 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DirectoryInterface, DocumentInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
+import { DirectoryInterface, DocumentInterface, DocumentWithRawJsonInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -20,9 +20,9 @@ import { zip } from '../.tsc/Cangjie/TypeSharp/System/zip';
 import { GitHubRelease } from "./git-interfaces";
 import { stringUtils } from "../.tsc/Cangjie/TypeSharp/System/stringUtils";
 import { PluginInterface } from '../.tsc/VizGroup/V1/TaskQueues/Plugins/PluginInterface';
-import { DateTimeUtils } from '../.tsc/Cangjie/TypeSharp/System/DateTimeUtils';
-
-
+import { Task } from '../.tsc/System/Threading/Tasks/Task';
+import { datetimeUtils } from '../.tsc/Cangjie/TypeSharp/System/datetimeUtils';
+import { taskUtils } from "../.tsc/Cangjie/TypeSharp/System/taskUtils";
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
 if (Directory.Exists(appDataDirectory) == false) {
     Directory.CreateDirectory(appDataDirectory);
@@ -760,7 +760,7 @@ let Client = () => {
                 result.untrackedFiles.push(file);
             }
             else {
-                if (DateTimeUtils.isSameWithMillisecond(document.fileLastWriteTime, fileUtils.lastWriteTime(file)) == false) {
+                if (datetimeUtils.isSameWithMillisecond(document.fileLastWriteTime, fileUtils.lastWriteTime(file)) == false) {
                     result.modifiedDocuments.push(document);
                 }
                 else if (document.fileLength != fileUtils.size(file)) {
@@ -774,6 +774,38 @@ let Client = () => {
                 result.missingDocuments.push(document);
             }
         }
+        let tasks = [] as any[];
+        for (let document of result.documents) {
+            let tempDocument = document;
+            tasks.push((async () => {
+                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonMD5);
+                if (Json.Validate(rawJsonContent)) {
+                    (tempDocument as DocumentWithRawJsonInterface).rawJson = Json.Parse(rawJsonContent);
+                }
+            })());
+
+        }
+        for (let document of result.modifiedDocuments) {
+            let tempDocument = document;
+            tasks.push((async () => {
+                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonMD5);
+                if (Json.Validate(rawJsonContent)) {
+                    (tempDocument as DocumentWithRawJsonInterface).rawJson = Json.Parse(rawJsonContent);
+                }
+            })());
+
+        }
+        for (let document of result.missingDocuments) {
+            let tempDocument = document;
+            tasks.push((async () => {
+                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonMD5);
+                if (Json.Validate(rawJsonContent)) {
+                    (tempDocument as DocumentWithRawJsonInterface).rawJson = Json.Parse(rawJsonContent);
+                }
+            })());
+
+        }
+        taskUtils.whenAll(tasks);
         return result;
     }
 
