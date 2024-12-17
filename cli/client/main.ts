@@ -420,7 +420,9 @@ let Client = () => {
             await db.register(databaseInterface);
         }
         registerService();
+        console.log(`Update plugin subscribers`);
         await pluginManager.updateSubscribers();
+        console.log(`Server started`);
     };
     let formatDirectory = (directory: string) => {
         return directory.replace('\\', '/').toLowerCase();
