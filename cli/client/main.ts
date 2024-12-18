@@ -760,6 +760,11 @@ let Client = () => {
                 result.untrackedFiles.push(file);
             }
             else {
+                console.log({
+                    db: document.fileLastWriteTime,
+                    file: fileUtils.lastWriteTime(file),
+                    isSame: datetimeUtils.isSameWithMillisecond(document.fileLastWriteTime, fileUtils.lastWriteTime(file))
+                });
                 if (datetimeUtils.isSameWithMillisecond(document.fileLastWriteTime, fileUtils.lastWriteTime(file)) == false) {
                     result.modifiedDocuments.push(document);
                 }
