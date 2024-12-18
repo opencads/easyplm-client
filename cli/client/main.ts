@@ -875,6 +875,9 @@ let Client = () => {
         server.use(`/api/v1/xplm/scanDirectory`, async (directory: string) => {
             return await scanDirectory(directory);
         });
+        server.use(`/api/v1/xplm/scanDefaultDirectory`, async () => {
+            return await scanDirectory(localConfig.getDefaultDirectory());
+        });
 
     };
     return {
