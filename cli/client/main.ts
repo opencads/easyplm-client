@@ -57,6 +57,10 @@ let DatabaseInterfaces = () => {
                 type: 'DateTime'
             },
             {
+                name: 'updateTime',
+                type: 'DateTime'
+            },
+            {
                 name: 'key',
                 type: 'md5',
                 isIndex: true
@@ -523,6 +527,7 @@ let Client = () => {
                 isUpdated = true;
             }
             if (isUpdated) {
+                record.updateTime = DateTime.Now;
                 await db.updatebyMaster(databaseInterfaces.documentInterface.name, record);
             }
             return record as DocumentInterface;
@@ -531,6 +536,7 @@ let Client = () => {
             let record = {
                 ...abstract,
                 createTime: DateTime.Now,
+                updateTime: DateTime.Now,
                 documentRemoteID: data.documentRemoteID,
                 partRemoteID: data.partRemoteID,
                 displayName: data.displayName
@@ -599,7 +605,7 @@ let Client = () => {
         for (let record of records) {
             if (record.lowerFormatFileName.length > 0) {
                 if (mapFileNameToRecord[record.lowerFormatFileName]) {
-                    if (record.createTime > mapFileNameToRecord[record.lowerFormatFileName].createTime) {
+                    if (record.updateTime > mapFileNameToRecord[record.lowerFormatFileName].updateTime) {
                         mapFileNameToRecord[record.lowerFormatFileName] = record;
                     }
                 }
@@ -609,7 +615,7 @@ let Client = () => {
             }
             else if (record.documentNumber0.length > 0) {
                 if (mapDocumentNumber0ToRecord[record.documentNumber0]) {
-                    if (record.createTime > mapDocumentNumber0ToRecord[record.documentNumber0].createTime) {
+                    if (record.updateTime > mapDocumentNumber0ToRecord[record.documentNumber0].updateTime) {
                         mapDocumentNumber0ToRecord[record.documentNumber0] = record;
                     }
                 }
@@ -619,7 +625,7 @@ let Client = () => {
             }
             else if (record.documentNumber1.length > 0) {
                 if (mapDocumentNumber1ToRecord[record.documentNumber1]) {
-                    if (record.createTime > mapDocumentNumber1ToRecord[record.documentNumber1].createTime) {
+                    if (record.updateTime > mapDocumentNumber1ToRecord[record.documentNumber1].updateTime) {
                         mapDocumentNumber1ToRecord[record.documentNumber1] = record;
                     }
                 }
@@ -629,7 +635,7 @@ let Client = () => {
             }
             else if (record.documentNumber2.length > 0) {
                 if (mapDocumentNumber2ToRecord[record.documentNumber2]) {
-                    if (record.createTime > mapDocumentNumber2ToRecord[record.documentNumber2].createTime) {
+                    if (record.updateTime > mapDocumentNumber2ToRecord[record.documentNumber2].updateTime) {
                         mapDocumentNumber2ToRecord[record.documentNumber2] = record;
                     }
                 }
@@ -639,7 +645,7 @@ let Client = () => {
             }
             else if (record.partNumber0.length > 0) {
                 if (mapPartNumber0ToRecord[record.partNumber0]) {
-                    if (record.createTime > mapPartNumber0ToRecord[record.partNumber0].createTime) {
+                    if (record.updateTime > mapPartNumber0ToRecord[record.partNumber0].updateTime) {
                         mapPartNumber0ToRecord[record.partNumber0] = record;
                     }
                 }
@@ -649,7 +655,7 @@ let Client = () => {
             }
             else if (record.partNumber1.length > 0) {
                 if (mapPartNumber1ToRecord[record.partNumber1]) {
-                    if (record.createTime > mapPartNumber1ToRecord[record.partNumber1].createTime) {
+                    if (record.updateTime > mapPartNumber1ToRecord[record.partNumber1].updateTime) {
                         mapPartNumber1ToRecord[record.partNumber1] = record;
                     }
                 }
@@ -659,7 +665,7 @@ let Client = () => {
             }
             else if (record.partNumber2.length > 0) {
                 if (mapPartNumber2ToRecord[record.partNumber2]) {
-                    if (record.createTime > mapPartNumber2ToRecord[record.partNumber2].createTime) {
+                    if (record.updateTime > mapPartNumber2ToRecord[record.partNumber2].updateTime) {
                         mapPartNumber2ToRecord[record.partNumber2] = record;
                     }
                 }

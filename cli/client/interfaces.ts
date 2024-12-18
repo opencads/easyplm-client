@@ -34,6 +34,7 @@ export interface DocumentInterface {
     partRemoteID: string,
     displayName: string,
     createTime: DateTime,
+    updateTime: DateTime,
     fileLastWriteTime: DateTime,
     fileLength: number
 }
