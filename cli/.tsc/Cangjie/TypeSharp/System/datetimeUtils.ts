@@ -21,4 +21,7 @@ export class datetimeUtils {
     public static isSameWithMillisecond(left?: DateTime, right?: DateTime): boolean {
         return {} as any;
     }
+    public static getJSTimestamp(dateTime?: DateTime): number {
+        return {} as any;
+    }
 }

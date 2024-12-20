@@ -884,6 +884,9 @@ let Client = () => {
         server.use(`/api/v1/xplm/scanDefaultDirectory`, async () => {
             return await scanDirectory(localConfig.getDefaultDirectory());
         });
+        server.use(`/api/v1/xplm/getContentArchivePath`, async (contentMD5: string) => {
+            return server.storageService.getContentArchivePath(contentMD5);
+        });
 
     };
     return {
