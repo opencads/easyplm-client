@@ -511,6 +511,9 @@ let Client = () => {
     let archiveDocument = async (data: ImportInterface) => {
         let abstract = formatImport(data);
         await server.storageService.importString(JSON.stringify(data.rawJson, null, 0));
+        if (data.filePath && File.Exists(data.filePath)) {
+            await server.storageService.importFile(data.filePath);
+        }
         if (await db.containsByIndex(databaseInterfaces.documentInterface.name, "key", abstract.key)) {
             let record = await db.findByIndex(databaseInterfaces.documentInterface.name, "key", abstract.key) as DocumentInterface;
             let isUpdated = false;
