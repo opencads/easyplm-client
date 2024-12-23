@@ -4,7 +4,7 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { DirectoryInterface, DocumentInterface, DocumentWithRawJsonInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
+import { ContentToRawjsonRelation, DirectoryInterface, DocumentInterface, DocumentWithRawJsonInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -178,9 +178,30 @@ let DatabaseInterfaces = () => {
             }
         ]
     } as databaseInterface;
+    let cotentToRawjsonRelationInterface = {
+        name: 'xplm/contentToRawjsonRelation',
+        fields: [
+            {
+                name: 'id',
+                isMaster: true,
+                type: 'Guid'
+            },
+            {
+                name: 'contentMD5',
+                type: 'md5',
+                isIndex: true
+            },
+            {
+                name: 'rawJsonMD5',
+                type: 'md5',
+                isIndexSet: true
+            }
+        ]
+    } as databaseInterface;
     return {
         documentInterface,
-        directoryInterface
+        directoryInterface,
+        cotentToRawjsonRelationInterface
     };
 };
 
@@ -410,6 +431,7 @@ let Client = () => {
     let db: database;
     let databaseInterfaces = DatabaseInterfaces();
     let localConfig = LocalConfig();
+    let emptyMD5 = md5("");
     let registerService = () => {
 
     };
@@ -435,23 +457,38 @@ let Client = () => {
     let getLowerFormatFileName = (filePath: string) => {
         return digitFileExtensionReg.Replace(Path.GetFileName(filePath), "").toLowerCase();
     };
-    let formatImport = (data: ImportInterface) => {
+    let formatImport = async (data: ImportInterface) => {
         let fileName = data.filePath == undefined ? "" : Path.GetFileName(data.filePath);
         let formatFileName = "";
         if (fileName != "") {
             formatFileName = digitFileExtensionReg.Replace(fileName, "");
         }
         let contentMD5 = "";
+        let containsContentMD5 = false;
         if (data.filePath != undefined && (File.Exists(data.filePath))) {
             contentMD5 = fileUtils.md5(data.filePath);
+            containsContentMD5 = true;
         }
         else {
             contentMD5 = md5("");
         }
+        let rawJsonMD5 = "";
+        if (data.rawJson) {
+            rawJsonMD5 = md5(JSON.stringify(data.rawJson, null, 0));
+        }
+        else if (containsContentMD5) {
+            if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
+                let relation = await db.findByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation;
+                rawJsonMD5 = relation.rawJsonMD5;
+            }
+        }
+        if (rawJsonMD5 == "") {
+            rawJsonMD5 = md5("");
+        }
         let abstract = {
             lowerFormatFileName: formatFileName.toLowerCase(),
             contentMD5: contentMD5,
-            rawJsonMD5: md5(JSON.stringify(data.rawJson, null, 0)),
+            rawJsonMD5: rawJsonMD5,
             documentNumber0: data.documentNumber0,
             documentNumber1: data.documentNumber1,
             documentNumber2: data.documentNumber2,
@@ -508,8 +545,33 @@ let Client = () => {
 
         }
     };
+    let isContentToRawJsonRelation = async (contentMD5: string) => {
+        return await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5);
+    };
+    let getRawJsonByContentMD5 = async (contentMD5: string) => {
+        if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
+            let relation = await db.findByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation;
+            let rawJsonMD5 = relation.rawJsonMD5;
+            return await server.storageService.readContent(rawJsonMD5);
+        }
+        else {
+            return null;
+        }
+    };
+    let tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {
+        if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
+            // 已存在
+        }
+        else {
+            let relation = {
+                contentMD5: contentMD5,
+                rawJsonMD5: rawJsonMD5
+            } as ContentToRawjsonRelation;
+            await db.insert(databaseInterfaces.cotentToRawjsonRelationInterface.name, relation);
+        }
+    };
     let archiveDocument = async (data: ImportInterface) => {
-        let abstract = formatImport(data);
+        let abstract = await formatImport(data);
         await server.storageService.importString(JSON.stringify(data.rawJson, null, 0));
         if (data.filePath && File.Exists(data.filePath)) {
             await server.storageService.importFile(data.filePath);
@@ -545,11 +607,13 @@ let Client = () => {
                 displayName: data.displayName
             };
             let index = await db.insert(databaseInterfaces.documentInterface.name, record);
+            if (abstract.rawJsonMD5 != emptyMD5) {
+                await tryCreateContentToRawjsonRelation(abstract.contentMD5, abstract.rawJsonMD5);
+            }
             return {
                 ...record,
                 id: index.Master
             } as DocumentInterface;
-
         }
     };
     let importDocumentsToDirectory = async (data: ImportInterface[]) => {
@@ -575,7 +639,7 @@ let Client = () => {
 
     };
     let isArchivedDocument = async (data: ImportInterface) => {
-        let abstract = formatImport(data);
+        let abstract = await formatImport(data);
         if (await db.containsByIndex(databaseInterfaces.documentInterface.name, "key", abstract.key)) {
             return true;
         }
@@ -816,7 +880,7 @@ let Client = () => {
         }
         taskUtils.whenAll(tasks);
         return result;
-    }
+    };
 
     let getPlugins = () => {
         let result = [] as PluginInterface[];
@@ -890,7 +954,19 @@ let Client = () => {
         server.use(`/api/v1/xplm/getContentArchivePath`, async (contentMD5: string) => {
             return server.storageService.getContentArchivePath(contentMD5);
         });
-
+        server.use(`/api/v1/xplm/isContentToRawJsonRelation`, async (contentMD5: string) => {
+            return await isContentToRawJsonRelation(contentMD5);
+        });
+        server.use(`/api/v1/xplm/getRawJsonByContentMD5s`, async (contentMD5s: any[]) => {
+            let result = [] as any[];
+            for (let contentMD5 of contentMD5s) {
+                result.push({
+                    contentMD5:contentMD5,
+                    rawJson: await getRawJsonByContentMD5(contentMD5)
+                });
+            }
+            return result;
+        });
     };
     return {
         start,

@@ -73,3 +73,8 @@ export interface ScanResult {
     missingDocuments: DocumentInterface[],
 }
 
+export interface ContentToRawjsonRelation {
+    id: Guid,
+    contentMD5: string,
+    rawJsonMD5: string
+}
