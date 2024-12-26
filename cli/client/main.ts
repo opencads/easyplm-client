@@ -438,17 +438,20 @@ let Client = () => {
     let start = async (port: number) => {
         console.log(`start server at port ${port}`);
         server.start(port);
+        console.log(`...`);
         await server.onConfigCompleted.Task;
+        console.log(`server config completed`);
         db = server.getDatabase();
         let interfaceKeys = Object.keys(databaseInterfaces);
         for (let interfaceKey of interfaceKeys) {
             let databaseInterface = databaseInterfaces[interfaceKey];
             await db.register(databaseInterface);
         }
+        console.log(`register database`);
         registerService();
-        console.log(`Update plugin subscribers`);
+        console.log(`update plugin subscribers`);
         await pluginManager.updateSubscribers();
-        console.log(`Server started`);
+        console.log(`server started`);
     };
     let formatDirectory = (directory: string) => {
         return directory.replace('\\', '/').toLowerCase();
