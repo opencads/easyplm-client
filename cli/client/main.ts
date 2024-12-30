@@ -523,11 +523,7 @@ let Client = () => {
         else {
             for (let directoryRecord of directoryRecords) {
                 let documents = directoryRecord.documents;
-                documents = documents.filter(item => {
-                    let result = item != Guid.Empty;
-                    console.log(`filter ${item}!= Guid.Empty ${result}`);
-                    return result;
-                });
+                documents = documents.filter(item => item != Guid.Empty);
                 let isUpdated = false;
                 for (let documentID of [...documentIDs]) {
                     if (documents.indexOf(documentID) == -1 && (documents.length < 32)) {
@@ -537,10 +533,12 @@ let Client = () => {
                     }
                 }
                 if (isUpdated) {
+                    console.log(`isUpdated, documents: ${documents}`);
                     directoryRecord.documents = documents;
                     await db.updatebyMaster(databaseInterfaces.directoryInterface.name, directoryRecord);
                 }
             }
+            console.log(`documentIDs: ${documentIDs}`);
             for (let i = 0; i < documentIDs.length; i += 32) {
                 let documentIDsChunk = documentIDs.slice(i, i + 32);
                 let directoryRecord = {
