@@ -514,6 +514,7 @@ let Client = () => {
         directory = formatDirectory(directory);
         let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory) as DirectoryInterface[];
         if (directoryRecords.length == 0) {
+            console.log(`directoryRecords.length == 0`);
             let directoryRecord = {
                 path: directory.toLowerCase(),
                 documents: documentIDs
@@ -545,9 +546,9 @@ let Client = () => {
                     path: directory.toLowerCase(),
                     documents: documentIDsChunk
                 } as DirectoryInterface;
+                console.log(`insert directoryRecord: ${directoryRecord}`);
                 await db.insert(databaseInterfaces.directoryInterface.name, directoryRecord);
             }
-
         }
     };
     let isContentToRawJsonRelation = async (contentMD5: string) => {
@@ -966,7 +967,7 @@ let Client = () => {
             let result = [] as any[];
             for (let contentMD5 of contentMD5s) {
                 result.push({
-                    contentMD5:contentMD5,
+                    contentMD5: contentMD5,
                     rawJson: await getRawJsonByContentMD5(contentMD5)
                 });
             }
