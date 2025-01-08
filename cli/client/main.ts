@@ -559,13 +559,14 @@ let Client = () => {
             return null;
         }
     };
+    let tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {};
     let cacheRawJson = async (contentMD5: string, rawJson: RawJson) => {
         let rawJsonString = JSON.stringify(rawJson, null, 0);
         let rawJsonMD5 = md5(rawJsonString);
         await server.storageService.importString(rawJsonString);
         await tryCreateContentToRawjsonRelation(contentMD5, rawJsonMD5);
     };
-    let tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {
+    tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {
         if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
             // 已存在
         }
