@@ -23,6 +23,7 @@ import { PluginInterface } from '../.tsc/VizGroup/V1/TaskQueues/Plugins/PluginIn
 import { Task } from '../.tsc/System/Threading/Tasks/Task';
 import { datetimeUtils } from '../.tsc/Cangjie/TypeSharp/System/datetimeUtils';
 import { taskUtils } from "../.tsc/Cangjie/TypeSharp/System/taskUtils";
+import { RawJson } from '../../../easyplm-plugins/cli/IRawJson';
 let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
 if (Directory.Exists(appDataDirectory) == false) {
     Directory.CreateDirectory(appDataDirectory);
@@ -89,7 +90,7 @@ let DatabaseInterfaces = () => {
                 isIndexSet: true
             },
             {
-                name: 'rawJsonMD5',
+                name: 'rawJsonDocumentMD5',
                 type: 'md5',
                 isIndexSet: true
             },
@@ -475,23 +476,17 @@ let Client = () => {
         else {
             contentMD5 = md5("");
         }
-        let rawJsonMD5 = "";
-        if (data.rawJson) {
-            rawJsonMD5 = md5(JSON.stringify(data.rawJson, null, 0));
+        let rawJsonDocumentMD5 = "";
+        if (data.rawJsonDocument) {
+            rawJsonDocumentMD5 = md5(JSON.stringify(data.rawJsonDocument, null, 0));
         }
-        else if (containsContentMD5) {
-            if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
-                let relation = await db.findByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation;
-                rawJsonMD5 = relation.rawJsonMD5;
-            }
-        }
-        if (rawJsonMD5 == "") {
-            rawJsonMD5 = md5("");
+        if (rawJsonDocumentMD5 == "") {
+            rawJsonDocumentMD5 = md5("");
         }
         let abstract = {
             lowerFormatFileName: formatFileName.toLowerCase(),
             contentMD5: contentMD5,
-            rawJsonMD5: rawJsonMD5,
+            rawJsonDocumentMD5: rawJsonDocumentMD5,
             documentNumber0: data.documentNumber0,
             documentNumber1: data.documentNumber1,
             documentNumber2: data.documentNumber2,
@@ -564,6 +559,12 @@ let Client = () => {
             return null;
         }
     };
+    let cacheRawJson = async (contentMD5: string, rawJson: RawJson) => {
+        let rawJsonString = JSON.stringify(rawJson, null, 0);
+        let rawJsonMD5 = md5(rawJsonString);
+        await server.storageService.importString(rawJsonString);
+        await tryCreateContentToRawjsonRelation(contentMD5, rawJsonMD5);
+    };
     let tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {
         if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
             // 已存在
@@ -578,7 +579,7 @@ let Client = () => {
     };
     let archiveDocument = async (data: ImportInterface) => {
         let abstract = await formatImport(data);
-        await server.storageService.importString(JSON.stringify(data.rawJson, null, 0));
+        await server.storageService.importString(JSON.stringify(data.rawJsonDocument, null, 0));
         if (data.filePath && File.Exists(data.filePath)) {
             await server.storageService.importFile(data.filePath);
         }
@@ -613,9 +614,6 @@ let Client = () => {
                 displayName: data.displayName
             };
             let index = await db.insert(databaseInterfaces.documentInterface.name, record);
-            if (abstract.rawJsonMD5 != emptyMD5) {
-                await tryCreateContentToRawjsonRelation(abstract.contentMD5, abstract.rawJsonMD5);
-            }
             return {
                 ...record,
                 id: index.Master
@@ -857,9 +855,9 @@ let Client = () => {
         for (let document of result.documents) {
             let tempDocument = document;
             tasks.push((async () => {
-                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonMD5);
+                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonDocumentMD5);
                 if (Json.Validate(rawJsonContent)) {
-                    (tempDocument as DocumentWithRawJsonInterface).rawJson = Json.Parse(rawJsonContent);
+                    (tempDocument as DocumentWithRawJsonInterface).rawJsonDocument = JSON.parse(rawJsonContent);
                 }
             })());
 
@@ -867,9 +865,9 @@ let Client = () => {
         for (let document of result.modifiedDocuments) {
             let tempDocument = document;
             tasks.push((async () => {
-                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonMD5);
+                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonDocumentMD5);
                 if (Json.Validate(rawJsonContent)) {
-                    (tempDocument as DocumentWithRawJsonInterface).rawJson = Json.Parse(rawJsonContent);
+                    (tempDocument as DocumentWithRawJsonInterface).rawJsonDocument = Json.Parse(rawJsonContent);
                 }
             })());
 
@@ -877,9 +875,9 @@ let Client = () => {
         for (let document of result.missingDocuments) {
             let tempDocument = document;
             tasks.push((async () => {
-                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonMD5);
+                let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonDocumentMD5);
                 if (Json.Validate(rawJsonContent)) {
-                    (tempDocument as DocumentWithRawJsonInterface).rawJson = Json.Parse(rawJsonContent);
+                    (tempDocument as DocumentWithRawJsonInterface).rawJsonDocument = Json.Parse(rawJsonContent);
                 }
             })());
 
@@ -966,12 +964,29 @@ let Client = () => {
         server.use(`/api/v1/xplm/getRawJsonByContentMD5s`, async (contentMD5s: any[]) => {
             let result = [] as any[];
             for (let contentMD5 of contentMD5s) {
-                result.push({
-                    contentMD5: contentMD5,
-                    rawJson: await getRawJsonByContentMD5(contentMD5)
-                });
+                let rawJsonContent = await getRawJsonByContentMD5(contentMD5);
+                if (rawJsonContent) {
+                    result.push({
+                        contentMD5: contentMD5,
+                        rawJson: JSON.parse(rawJsonContent)
+                    });
+                }
+                else {
+                    result.push({
+                        contentMD5: contentMD5,
+                        rawJson: null
+                    });
+                }
             }
             return result;
+        });
+        server.use(`/api/v1/xplm/cacheRawJson`, async (items: {
+            contentMD5: string,
+            rawJson: any
+        }[]) => {
+            for (let item of items) {
+                await cacheRawJson(item.contentMD5, item.rawJson);
+            }
         });
     };
     return {

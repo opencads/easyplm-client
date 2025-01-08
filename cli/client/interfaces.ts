@@ -1,10 +1,11 @@
 import { DateTime } from "../.tsc/System/DateTime";
 import { Guid } from "../.tsc/System/Guid";
+import { RawJsonDocument } from "./IRawJson";
 
 export interface ImportInterface {
     filePath?: string,
     directory?: string,
-    rawJson?: any,
+    rawJsonDocument?: any,
     documentNumber0?: string,
     documentNumber1?: string,
     documentNumber2?: string,
@@ -23,7 +24,7 @@ export interface DocumentInterface {
     formatFileName: string,
     lowerFormatFileName: string,
     contentMD5: string,
-    rawJsonMD5: string,
+    rawJsonDocumentMD5: string,
     documentNumber0: string,
     documentNumber1: string,
     documentNumber2: string,
@@ -63,7 +64,7 @@ export interface GitRemote {
 }
 
 export interface DocumentWithRawJsonInterface extends DocumentInterface {
-    rawJson: any
+    rawJsonDocument: RawJsonDocument
 }
 
 export interface ScanResult {
