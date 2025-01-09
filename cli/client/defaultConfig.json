@@ -1,7 +1,9 @@
 {
-    "pluginSubscribers":[
+    "pluginSubscribers": [
         {
-            
+            "url": "https://github.com/opencads/easyplm-plugins.git",
+            "name": "easyplm-plugins.git",
+            "type": "git-repository"
         }
     ]
 }
