@@ -856,11 +856,9 @@ let Client = () => {
             let tempDocument = document;
             tasks.push((async () => {
                 let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonDocumentMD5);
+                console.log(`rawJsonContent = ${rawJsonContent}`);
                 if (Json.Validate(rawJsonContent)) {
                     (tempDocument as DocumentWithRawJsonInterface).rawJsonDocument = JSON.parse(rawJsonContent);
-                }
-                else{
-                    console.log(`${tempDocument.id} rawJsonContent is invalid, ${rawJsonContent}`);
                 }
             })());
 
