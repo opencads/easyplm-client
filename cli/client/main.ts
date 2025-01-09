@@ -507,6 +507,7 @@ let Client = () => {
     let tryAddToDirectory = async (directory: string, documentIDs: Guid[]) => {
         directory = formatDirectory(directory);
         let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory) as DirectoryInterface[];
+        console.log(`directoryRecords=${directoryRecords}`);
         if (directoryRecords.length == 0) {
             console.log(`directoryRecords.length == 0`);
             let directoryRecord = {
