@@ -507,7 +507,6 @@ let Client = () => {
     let tryAddToDirectory = async (directory: string, documentIDs: Guid[]) => {
         directory = formatDirectory(directory);
         let directoryRecords = await db.findByIndexSet(databaseInterfaces.directoryInterface.name, "path", directory) as DirectoryInterface[];
-        console.log(`directoryRecords=${directoryRecords}`);
         if (directoryRecords.length == 0) {
             console.log(`directoryRecords.length == 0`);
             let directoryRecord = {
@@ -522,7 +521,12 @@ let Client = () => {
                 documents = documents.filter(item => item != Guid.Empty);
                 let isUpdated = false;
                 for (let documentID of [...documentIDs]) {
-                    if (documents.indexOf(documentID) == -1 && (documents.length < 32)) {
+                    let finIndex = documents.indexOf(documentID);
+                    if (finIndex != -1) {
+                        // 已存在
+                        documentIDs.splice(documentIDs.indexOf(documentID), 1);
+                    }
+                    if (finIndex == -1 && (documents.length < 32)) {
                         documents.push(documentID);
                         documentIDs.splice(documentIDs.indexOf(documentID), 1);
                         isUpdated = true;
