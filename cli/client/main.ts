@@ -1,4 +1,4 @@
-import { args, cmdAsync, deleteDirectory, env, execAsync, md5 } from '../.tsc/context';
+import { args, cmdAsync, deleteDirectory, env, execAsync, md5, script_path } from '../.tsc/context';
 import { database } from '../.tsc/Cangjie/TypeSharp/System/database';
 import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInterface';
 import { Console } from '../.tsc/System/Console';
@@ -321,11 +321,10 @@ let LocalConfig = () => {
     let config = {} as any;
     let load = () => {
         if (File.Exists(filePath)) {
-            config = Json.Load(filePath);
+            let defaultConfigPath = Path.Combine(Path.GetDirectoryName(script_path), "defaultConfig.json");
+            File.Copy(defaultConfigPath, filePath);
         }
-        else {
-            config = {};
-        }
+        config = Json.Load(filePath);
     };
     let save = () => {
         File.WriteAllText(filePath, JSON.stringify(config));
@@ -559,7 +558,7 @@ let Client = () => {
             return null;
         }
     };
-    let tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {};
+    let tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => { };
     let cacheRawJson = async (contentMD5: string, rawJson: RawJson) => {
         let rawJsonString = JSON.stringify(rawJson, null, 0);
         let rawJsonMD5 = md5(rawJsonString);
