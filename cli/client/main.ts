@@ -859,6 +859,9 @@ let Client = () => {
                 if (Json.Validate(rawJsonContent)) {
                     (tempDocument as DocumentWithRawJsonInterface).rawJsonDocument = JSON.parse(rawJsonContent);
                 }
+                else{
+                    console.log(`${tempDocument.id} rawJsonContent is invalid, ${rawJsonContent}`);
+                }
             })());
 
         }
