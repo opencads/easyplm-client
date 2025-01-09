@@ -320,7 +320,7 @@ let LocalConfig = () => {
     let filePath = Path.Combine(appDataDirectory, 'config.json');
     let config = {} as any;
     let load = () => {
-        if (File.Exists(filePath)) {
+        if (File.Exists(filePath)==false) {
             let defaultConfigPath = Path.Combine(Path.GetDirectoryName(script_path), "defaultConfig.json");
             File.Copy(defaultConfigPath, filePath);
         }
