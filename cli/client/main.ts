@@ -881,8 +881,7 @@ let Client = () => {
             })());
 
         }
-        taskUtils.whenAll(tasks);
-        console.log(result);
+        await taskUtils.whenAll(tasks);
         return result;
     };
 
