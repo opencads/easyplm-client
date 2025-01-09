@@ -856,12 +856,10 @@ let Client = () => {
             let tempDocument = document;
             tasks.push((async () => {
                 let rawJsonContent = await server.storageService.readContent(tempDocument.rawJsonDocumentMD5);
-                console.log(`rawJsonContent = ${rawJsonContent}`);
                 if (Json.Validate(rawJsonContent)) {
                     (tempDocument as DocumentWithRawJsonInterface).rawJsonDocument = JSON.parse(rawJsonContent);
                 }
             })());
-
         }
         for (let document of result.modifiedDocuments) {
             let tempDocument = document;
@@ -884,6 +882,7 @@ let Client = () => {
 
         }
         taskUtils.whenAll(tasks);
+        console.log(result);
         return result;
     };
 
