@@ -208,7 +208,6 @@ let DatabaseInterfaces = () => {
 
 let GitManager = () => {
     let getGitInfo = (url: string) => {
-        // https://github.com/opencads/xplm-ui-home.git
         if (url.endsWith(".git")) {
             url = url.substring(0, url.length - 4);
         }
