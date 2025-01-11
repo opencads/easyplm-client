@@ -510,12 +510,12 @@ let Client = () => {
         };
 
         let getAttachmentsByContentMD5 = async (contentMD5: string) => {
-            return await db.findByIndexSet(databaseInterfaces.contentToAttachmentRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation[];
+            return await db.findByIndexSet(databaseInterfaces.contentToAttachmentRelationInterface.name, "contentMD5", contentMD5) as ContentToAttachmentRelation[];
         };
 
         let getAttachmentsByContentMD5AndExtension = async (contentMD5: string, extension: string) => {
             let extensionKey = md5(`${contentMD5}-${extension.toLowerCase()}`);
-            return await db.findByIndexSet(databaseInterfaces.contentToAttachmentRelationInterface.name, "extensionKey", extensionKey) as ContentToRawjsonRelation[];
+            return await db.findByIndexSet(databaseInterfaces.contentToAttachmentRelationInterface.name, "extensionKey", extensionKey) as ContentToAttachmentRelation[];
         };
 
         return {
@@ -1064,7 +1064,43 @@ let Client = () => {
                 await cacheRawJson(item.contentMD5, item.rawJson);
             }
         });
-        server.use(`/api/v1/easyplm/`);
+        server.use(`/api/v1/easyplm/getAttachmentsByContentMD5s`, async (contentMD5s: string[]) => {
+            let result = [] as {
+                contentMD5: string,
+                attachments: ContentToAttachmentRelation[]
+            }[];
+            for (let contentMD5 of contentMD5s) {
+                let attachments = await attachmentService.getAttachmentsByContentMD5(contentMD5);
+                result.push({
+                    contentMD5: contentMD5,
+                    attachments: attachments
+                });
+            }
+            return result;
+        });
+        server.use(`/api/v1/easyplm/archiveAttachments`, async (items: {
+            contentMD5: string,
+            attachments: {
+                filePath: string,
+                contentMD5: string,
+            }[]
+        }[]) => {
+            // 第一步，归档文件
+            for (let item of items) {
+                for (let attachment of item.attachments) {
+                    if (await server.storageService.containsContentByMD5(attachment.contentMD5)) {
+                        continue;
+                    }
+                    await server.storageService.importFile(attachment.filePath);
+                }
+            }
+            // 第二步，归档关系
+            for (let item of items) {
+                for (let attachment of item.attachments) {
+                    await attachmentService.tryCreateContentToAttachmentRelation(item.contentMD5, Path.GetFileName(attachment.filePath), attachment.contentMD5);
+                }
+            }
+        });
     };
     return {
         start,
