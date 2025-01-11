@@ -46,6 +46,15 @@ export interface DirectoryInterface {
     documents: Guid[]
 }
 
+export interface ContentToAttachmentRelation {
+    id: Guid,
+    key: string,
+    extensionKey: string,
+    contentMD5: string,
+    attachmentFileName: string,
+    attachmentMD5: string
+}
+
 export interface PluginSubscriber {
     url: string,
     name: string,

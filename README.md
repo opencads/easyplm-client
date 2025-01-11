@@ -1,1 +1,1 @@
-# xplm-client
+# easyplm-client

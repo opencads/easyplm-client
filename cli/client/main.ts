@@ -4,7 +4,7 @@ import { databaseInterface } from '../.tsc/Cangjie/TypeSharp/System/databaseInte
 import { Console } from '../.tsc/System/Console';
 import { Server } from '../.tsc/Cangjie/TypeSharp/System/Server';
 import { Path } from '../.tsc/System/IO/Path';
-import { ContentToRawjsonRelation, DirectoryInterface, DocumentInterface, DocumentWithRawJsonInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
+import { ContentToAttachmentRelation, ContentToRawjsonRelation, DirectoryInterface, DocumentInterface, DocumentWithRawJsonInterface, GitRemote, ImportInterface, LocalSubscriber, PluginSubscriber, ScanResult } from './interfaces';
 import { Regex } from '../.tsc/System/Text/RegularExpressions/Regex';
 import { File } from '../.tsc/System/IO/File';
 import { fileUtils } from '../.tsc/Cangjie/TypeSharp/System/fileUtils';
@@ -24,7 +24,7 @@ import { Task } from '../.tsc/System/Threading/Tasks/Task';
 import { datetimeUtils } from '../.tsc/Cangjie/TypeSharp/System/datetimeUtils';
 import { taskUtils } from "../.tsc/Cangjie/TypeSharp/System/taskUtils";
 import { RawJson } from '../../../easyplm-plugins/cli/IRawJson';
-let appDataDirectory = Path.Combine(env('userprofile'), '.xplm');
+let appDataDirectory = Path.Combine(env('userprofile'), '.easyplm');
 if (Directory.Exists(appDataDirectory) == false) {
     Directory.CreateDirectory(appDataDirectory);
 }
@@ -32,7 +32,7 @@ let downloadDirectory = Path.Combine(appDataDirectory, 'download');
 if (Directory.Exists(downloadDirectory) == false) {
     Directory.CreateDirectory(downloadDirectory);
 }
-let defaultWorkSpaceDirectory = Path.Combine(env('mydocuments'), '.xplm', 'WorkSpace');
+let defaultWorkSpaceDirectory = Path.Combine(env('mydocuments'), '.easyplm', 'WorkSpace');
 if (Directory.Exists(defaultWorkSpaceDirectory) == false) {
     Directory.CreateDirectory(defaultWorkSpaceDirectory);
 }
@@ -46,7 +46,7 @@ if (Directory.Exists(databaseDirectory) == false) {
 }
 let DatabaseInterfaces = () => {
     let documentInterface = {
-        name: 'xplm/document',
+        name: 'easyplm/document',
         fields: [
             {
                 name: 'id',
@@ -159,7 +159,7 @@ let DatabaseInterfaces = () => {
         ]
     } as databaseInterface;
     let directoryInterface = {
-        name: 'xplm/directory',
+        name: 'easyplm/directory',
         fields: [
             {
                 name: 'id',
@@ -179,8 +179,8 @@ let DatabaseInterfaces = () => {
             }
         ]
     } as databaseInterface;
-    let cotentToRawjsonRelationInterface = {
-        name: 'xplm/contentToRawjsonRelation',
+    let contentToRawjsonRelationInterface = {
+        name: 'easyplm/contentToRawjsonRelation',
         fields: [
             {
                 name: 'id',
@@ -199,10 +199,45 @@ let DatabaseInterfaces = () => {
             }
         ]
     } as databaseInterface;
+    let contentToAttachmentRelationInterface = {
+        name: 'easyplm/ontentToAttachmentRelation',
+        fields: [
+            {
+                name: 'id',
+                isMaster: true,
+                type: 'Guid'
+            },
+            {
+                name: 'key',
+                type: 'md5',
+                isIndex: true
+            },
+            {
+                name: 'extensionKey',
+                type: 'md5',
+                isIndexSet: true
+            },
+            {
+                name: 'contentMD5',
+                type: 'md5',
+                isIndexSet: true
+            },
+            {
+                name: 'attachmentFileName',
+                type: 'char',
+                length: 256
+            },
+            {
+                name: 'attachmentMD5',
+                type: 'md5'
+            }
+        ]
+    } as databaseInterface;
     return {
         documentInterface,
         directoryInterface,
-        cotentToRawjsonRelationInterface
+        contentToRawjsonRelationInterface,
+        contentToAttachmentRelationInterface
     };
 };
 
@@ -254,7 +289,7 @@ let GitManager = () => {
     let downloadRelease = async (owner: string, repo: string, outputDirectory: string) => {
         let latestRelease = await getLatestRelease(owner, repo);
         let lastRelease = {} as GitHubRelease;
-        let localReleaseJsonPath = Path.Combine(outputDirectory, '.xplm.gitrelease.json');
+        let localReleaseJsonPath = Path.Combine(outputDirectory, '.easyplm.gitrelease.json');
         if (File.Exists(localReleaseJsonPath)) {
             lastRelease = Json.Load(localReleaseJsonPath);
         }
@@ -387,7 +422,7 @@ let PluginManager = () => {
         let subDirectories = Directory.GetDirectories(pluginsDirectory);
         let result = [] as LocalSubscriber[];
         for (let subDirectory of subDirectories) {
-            let localReleaseJsonPath = Path.Combine(subDirectory, '.xplm.gitrelease.json');
+            let localReleaseJsonPath = Path.Combine(subDirectory, '.easyplm.gitrelease.json');
             let gitDirectory = Path.Combine(subDirectory, '.git');
             if (File.Exists(localReleaseJsonPath)) {
                 let gitReleaseJson = Json.Load(localReleaseJsonPath) as GitHubRelease;
@@ -431,6 +466,7 @@ let Client = () => {
     let databaseInterfaces = DatabaseInterfaces();
     let localConfig = LocalConfig();
     let emptyMD5 = md5("");
+
     let registerService = () => {
 
     };
@@ -452,6 +488,43 @@ let Client = () => {
         await pluginManager.updateSubscribers();
         console.log(`server started`);
     };
+
+    let AttachmentService = () => {
+        let tryCreateContentToAttachmentRelation = async (contentMD5: string, attachmentFileName: string, attachmentMD5: string) => {
+            let key = md5(`${contentMD5}-${attachmentMD5}`);
+            let extension = Path.GetExtension(attachmentFileName);
+            let extensionKey = md5(`${contentMD5}-${extension.toLowerCase()}`);
+            if (await db.containsByIndex(databaseInterfaces.contentToAttachmentRelationInterface.name, "key", key)) {
+                // 已存在
+            }
+            else {
+                let relation = {
+                    key: key,
+                    extensionKey: extensionKey,
+                    contentMD5: contentMD5,
+                    attachmentFileName: attachmentFileName,
+                    attachmentMD5: attachmentMD5
+                } as ContentToAttachmentRelation;
+                await db.insert(databaseInterfaces.contentToAttachmentRelationInterface.name, relation);
+            }
+        };
+
+        let getAttachmentsByContentMD5 = async (contentMD5: string) => {
+            return await db.findByIndexSet(databaseInterfaces.contentToAttachmentRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation[];
+        };
+
+        let getAttachmentsByContentMD5AndExtension = async (contentMD5: string, extension: string) => {
+            let extensionKey = md5(`${contentMD5}-${extension.toLowerCase()}`);
+            return await db.findByIndexSet(databaseInterfaces.contentToAttachmentRelationInterface.name, "extensionKey", extensionKey) as ContentToRawjsonRelation[];
+        };
+
+        return {
+            tryCreateContentToAttachmentRelation,
+            getAttachmentsByContentMD5,
+            getAttachmentsByContentMD5AndExtension
+        }
+    };
+    let attachmentService = AttachmentService();
     let formatDirectory = (directory: string) => {
         return directory.replace('\\', '/').toLowerCase();
     };
@@ -550,11 +623,11 @@ let Client = () => {
         }
     };
     let isContentToRawJsonRelation = async (contentMD5: string) => {
-        return await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5);
+        return await db.containsByIndex(databaseInterfaces.contentToRawjsonRelationInterface.name, "contentMD5", contentMD5);
     };
     let getRawJsonByContentMD5 = async (contentMD5: string) => {
-        if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
-            let relation = await db.findByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation;
+        if (await db.containsByIndex(databaseInterfaces.contentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
+            let relation = await db.findByIndex(databaseInterfaces.contentToRawjsonRelationInterface.name, "contentMD5", contentMD5) as ContentToRawjsonRelation;
             let rawJsonMD5 = relation.rawJsonMD5;
             return await server.storageService.readContent(rawJsonMD5);
         }
@@ -570,7 +643,7 @@ let Client = () => {
         await tryCreateContentToRawjsonRelation(contentMD5, rawJsonMD5);
     };
     tryCreateContentToRawjsonRelation = async (contentMD5: string, rawJsonMD5: string) => {
-        if (await db.containsByIndex(databaseInterfaces.cotentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
+        if (await db.containsByIndex(databaseInterfaces.contentToRawjsonRelationInterface.name, "contentMD5", contentMD5)) {
             // 已存在
         }
         else {
@@ -578,7 +651,7 @@ let Client = () => {
                 contentMD5: contentMD5,
                 rawJsonMD5: rawJsonMD5
             } as ContentToRawjsonRelation;
-            await db.insert(databaseInterfaces.cotentToRawjsonRelationInterface.name, relation);
+            await db.insert(databaseInterfaces.contentToRawjsonRelationInterface.name, relation);
         }
     };
     let archiveDocument = async (data: ImportInterface) => {
@@ -900,10 +973,10 @@ let Client = () => {
     };
 
     registerService = () => {
-        server.use(`/api/v1/xplm/import`, async (data: ImportInterface[]) => {
+        server.use(`/api/v1/easyplm/import`, async (data: ImportInterface[]) => {
             return await importDocumentsToDirectory(data);
         });
-        server.use(`/api/v1/xplm/isImported`, async (data: ImportInterface[]) => {
+        server.use(`/api/v1/easyplm/isImported`, async (data: ImportInterface[]) => {
             let result = [] as any[];
             for (let importData of data) {
                 let isImported = await isArchivedDocument(importData);
@@ -914,10 +987,10 @@ let Client = () => {
             }
             return result;
         });
-        server.use(`/api/v1/xplm/getDocumentsByDirectory`, async (directory: string) => {
+        server.use(`/api/v1/easyplm/getDocumentsByDirectory`, async (directory: string) => {
             return await getDocumentsByDirectory(directory);
         });
-        server.use(`/api/v1/xplm/getDefaultDirectory`, async () => {
+        server.use(`/api/v1/easyplm/getDefaultDirectory`, async () => {
             if (localConfig.get().defaultDirectory) {
                 return localConfig.get().defaultDirectory;
             }
@@ -925,46 +998,46 @@ let Client = () => {
                 return defaultWorkSpaceDirectory;
             }
         });
-        server.use(`/api/v1/xplm/setDefaultDirectory`, async (defaultDirectory: string) => {
+        server.use(`/api/v1/easyplm/setDefaultDirectory`, async (defaultDirectory: string) => {
             localConfig.setDefaultDirectory(defaultDirectory);
         });
-        server.use(`/api/v1/xplm/getPluginSubscribers`, async () => {
+        server.use(`/api/v1/easyplm/getPluginSubscribers`, async () => {
             return localConfig.getPluginSubscribers();
         });
-        server.use(`/api/v1/xplm/setPluginSubscribers`, async (subscribers: PluginSubscriber[]) => {
+        server.use(`/api/v1/easyplm/setPluginSubscribers`, async (subscribers: PluginSubscriber[]) => {
             localConfig.setPluginSubscribers(subscribers);
         });
-        server.use(`/api/v1/xplm/addPluginSubscriber`, async (subscriber: PluginSubscriber) => {
+        server.use(`/api/v1/easyplm/addPluginSubscriber`, async (subscriber: PluginSubscriber) => {
             localConfig.addPluginSubscriber(subscriber);
         });
-        server.use(`/api/v1/xplm/updatePlugins`, async () => {
+        server.use(`/api/v1/easyplm/updatePlugins`, async () => {
             await pluginManager.updateSubscribers();
         });
-        server.use(`/api/v1/xplm/downloadToDefaultDirectory`, async (fileID: Guid, fileName: string) => {
+        server.use(`/api/v1/easyplm/downloadToDefaultDirectory`, async (fileID: Guid, fileName: string) => {
             await downloadToDefaultDirectory(fileID, fileName);
         });
-        server.use(`/api/v1/xplm/getLocalSubscribers`, async () => {
+        server.use(`/api/v1/easyplm/getLocalSubscribers`, async () => {
             return await pluginManager.getLocalSubscribers();
         });
-        server.use(`/api/v1/xplm/removeLocalSubscriber`, async (name: string) => {
+        server.use(`/api/v1/easyplm/removeLocalSubscriber`, async (name: string) => {
             return pluginManager.removeLocalSubscriber(name);
         });
-        server.use(`/api/v1/xplm/getPlugins`, async () => {
+        server.use(`/api/v1/easyplm/getPlugins`, async () => {
             return getPlugins();
         });
-        server.use(`/api/v1/xplm/scanDirectory`, async (directory: string) => {
+        server.use(`/api/v1/easyplm/scanDirectory`, async (directory: string) => {
             return await scanDirectory(directory);
         });
-        server.use(`/api/v1/xplm/scanDefaultDirectory`, async () => {
+        server.use(`/api/v1/easyplm/scanDefaultDirectory`, async () => {
             return await scanDirectory(localConfig.getDefaultDirectory());
         });
-        server.use(`/api/v1/xplm/getContentArchivePath`, async (contentMD5: string) => {
+        server.use(`/api/v1/easyplm/getContentArchivePath`, async (contentMD5: string) => {
             return server.storageService.getContentArchivePath(contentMD5);
         });
-        server.use(`/api/v1/xplm/isContentToRawJsonRelation`, async (contentMD5: string) => {
+        server.use(`/api/v1/easyplm/isContentToRawJsonRelation`, async (contentMD5: string) => {
             return await isContentToRawJsonRelation(contentMD5);
         });
-        server.use(`/api/v1/xplm/getRawJsonByContentMD5s`, async (contentMD5s: any[]) => {
+        server.use(`/api/v1/easyplm/getRawJsonByContentMD5s`, async (contentMD5s: any[]) => {
             let result = [] as any[];
             for (let contentMD5 of contentMD5s) {
                 let rawJsonContent = await getRawJsonByContentMD5(contentMD5);
@@ -983,7 +1056,7 @@ let Client = () => {
             }
             return result;
         });
-        server.use(`/api/v1/xplm/cacheRawJson`, async (items: {
+        server.use(`/api/v1/easyplm/cacheRawJson`, async (items: {
             contentMD5: string,
             rawJson: any
         }[]) => {
@@ -991,6 +1064,7 @@ let Client = () => {
                 await cacheRawJson(item.contentMD5, item.rawJson);
             }
         });
+        server.use(`/api/v1/easyplm/`);
     };
     return {
         start,
